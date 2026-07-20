@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ежедневник</title>
     <style>
-        /* ===== СТРОГИЙ ДИЗАЙН (MINIMALIST) ===== */
         :root {
             --bg: #f5f5f7;
             --surface: #ffffff;
@@ -27,7 +26,6 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ===== ШАПКА ===== */
         .header {
             position: sticky;
             top: 0;
@@ -42,11 +40,7 @@
             z-index: 50;
         }
 
-        .header-title {
-            font-size: 17px;
-            font-weight: 600;
-            letter-spacing: -0.3px;
-        }
+        .header-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
 
         .icon-btn {
             background: none;
@@ -60,7 +54,6 @@
             justify-content: center;
         }
 
-        /* ===== БОКОВОЕ МЕНЮ ===== */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -72,14 +65,15 @@
 
         .sidebar {
             position: fixed;
-            top: 0; left: -280px;
-            width: 280px;
+            top: 0; left: -300px;
+            width: 300px;
             height: 100%;
             background: var(--surface);
             border-right: 1px solid var(--border);
             z-index: 100;
             transition: left 0.3s ease;
             padding-top: 20px;
+            overflow-y: auto;
         }
         .sidebar.active { left: 0; }
 
@@ -90,10 +84,7 @@
             font-weight: 700;
         }
 
-        .sidebar-menu {
-            list-style: none;
-            padding: 10px 0;
-        }
+        .sidebar-menu { list-style: none; padding: 10px 0; }
 
         .sidebar-menu li {
             padding: 12px 20px;
@@ -109,37 +100,60 @@
         
         .menu-icon { font-size: 18px; width: 24px; text-align: center; }
 
-        /* ===== КОНТЕНТ ===== */
-        .content {
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
+        .sidebar-section {
+            padding: 16px 20px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+
+        .sidebar-section button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        .list-item {
+            padding: 10px 20px 10px 56px;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .list-item:hover { background: var(--bg); }
+        .list-item.active { color: var(--accent); font-weight: 600; }
+        .list-item .list-count { font-size: 13px; color: var(--text-secondary); }
+        .list-item .list-delete {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .list-item:hover .list-delete { opacity: 1; }
+        .list-item .list-delete:hover { color: var(--danger); }
+
+        .content { padding: 20px; max-width: 800px; margin: 0 auto; }
 
         .view { display: none; }
         .view.active { display: block; }
 
-        .view-title {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 4px;
-            letter-spacing: -0.5px;
-        }
+        .view-title { font-size: 28px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
+        .view-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; }
 
-        .view-subtitle {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-        }
-
-        /* ===== СПИСКИ (ФИЛЬТРЫ) ===== */
-        .filters {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
-            overflow-x: auto;
-            padding-bottom: 4px;
-        }
+        .filters { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 4px; }
 
         .filter-chip {
             padding: 6px 14px;
@@ -152,13 +166,8 @@
             color: var(--text-secondary);
             transition: all 0.2s;
         }
-        .filter-chip.active {
-            background: var(--text-primary);
-            color: white;
-            border-color: var(--text-primary);
-        }
+        .filter-chip.active { background: var(--text-primary); color: white; border-color: var(--text-primary); }
 
-        /* ===== ЗАДАЧИ ===== */
         .task-list { list-style: none; }
 
         .task-item {
@@ -189,30 +198,16 @@
             transition: all 0.2s;
         }
         .task-checkbox:hover { border-color: var(--accent); }
-        .task-item.completed .task-checkbox {
-            background: var(--accent);
-            border-color: var(--accent);
-        }
-        .task-item.completed .task-checkbox::after {
-            content: '✓';
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-        }
+        .task-item.completed .task-checkbox { background: var(--accent); border-color: var(--accent); }
+        .task-item.completed .task-checkbox::after { content: '✓'; color: white; font-size: 12px; font-weight: bold; }
 
-        .task-content { flex: 1; }
+        .task-content { flex: 1; min-width: 0; }
         .task-name { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
-        .task-meta { font-size: 13px; color: var(--text-secondary); display: flex; gap: 12px; }
+        .task-meta { font-size: 13px; color: var(--text-secondary); display: flex; gap: 12px; flex-wrap: wrap; }
         
-        .task-item.completed .task-name { 
-            text-decoration: line-through; 
-            color: var(--text-secondary); 
-        }
+        .task-item.completed .task-name { text-decoration: line-through; color: var(--text-secondary); }
 
-        .task-actions {
-            display: flex;
-            gap: 8px;
-        }
+        .task-actions { display: flex; gap: 8px; }
         .action-btn {
             background: none;
             border: none;
@@ -223,14 +218,8 @@
         }
         .action-btn.delete:hover { color: var(--danger); }
 
-        .empty-state {
-            text-align: center;
-            color: var(--text-secondary);
-            padding: 40px 20px;
-            font-size: 15px;
-        }
+        .empty-state { text-align: center; color: var(--text-secondary); padding: 40px 20px; font-size: 15px; }
 
-        /* ===== КАЛЕНДАРЬ ===== */
         .cal-nav {
             display: flex;
             justify-content: space-between;
@@ -254,19 +243,8 @@
         .cal-nav button:hover { background: var(--bg); }
         .cal-title { font-size: 16px; font-weight: 600; text-transform: capitalize; }
 
-        .cal-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
-            margin-bottom: 30px;
-        }
-        .cal-weekday {
-            text-align: center;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            padding: 8px 0;
-        }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 30px; }
+        .cal-weekday { text-align: center; font-size: 12px; font-weight: 600; color: var(--text-secondary); padding: 8px 0; }
         .cal-day {
             aspect-ratio: 1;
             display: flex;
@@ -284,13 +262,9 @@
         .cal-day.today { font-weight: 700; color: var(--accent); }
         .cal-day.selected { background: var(--text-primary); color: white; font-weight: 600; }
         .cal-day.other-month { color: var(--text-secondary); opacity: 0.4; background: transparent; }
-        .cal-day .dot {
-            width: 4px; height: 4px; background: var(--accent);
-            border-radius: 50%; position: absolute; bottom: 6px;
-        }
+        .cal-day .dot { width: 4px; height: 4px; background: var(--accent); border-radius: 50%; position: absolute; bottom: 6px; }
         .cal-day.selected .dot { background: white; }
 
-        /* ===== МОДАЛЬНОЕ ОКНО ===== */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -333,6 +307,8 @@
             font-family: inherit;
             background: var(--bg);
             color: var(--text-primary);
+            min-width: 0;
+            -webkit-appearance: none;
         }
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
             outline: none;
@@ -342,7 +318,7 @@
         .form-group textarea { height: 80px; resize: vertical; }
 
         .form-row { display: flex; gap: 12px; }
-        .form-row .form-group { flex: 1; }
+        .form-row .form-group { flex: 1; min-width: 0; }
 
         .modal-buttons { display: flex; gap: 10px; margin-top: 24px; }
         .modal-buttons button {
@@ -356,18 +332,21 @@
         }
         .btn-save { background: var(--accent); color: white; }
         .btn-cancel { background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); }
+
+        @media (max-width: 480px) {
+            .form-row { flex-direction: column; gap: 0; }
+            .modal { padding: 20px; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- ШАПКА -->
     <header class="header">
         <button class="icon-btn" onclick="toggleSidebar()">☰</button>
         <div class="header-title">Ежедневник</div>
         <button class="icon-btn" onclick="openModal()">+</button>
     </header>
 
-    <!-- БОКОВОЕ МЕНЮ -->
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
     <nav class="sidebar" id="sidebar">
         <div class="sidebar-header">Меню</div>
@@ -376,24 +355,24 @@
             <li onclick="showView('calendar')"><span class="menu-icon">▦</span> Календарь</li>
             <li onclick="showView('trash')"><span class="menu-icon">🗑</span> Корзина</li>
         </ul>
+        <div class="sidebar-section">
+            <span>Списки</span>
+            <button onclick="addList()">+</button>
+        </div>
+        <div id="sidebar-lists"></div>
     </nav>
 
-    <!-- ОСНОВНОЙ КОНТЕНТ -->
     <main class="content">
         
-        <!-- ЭКРАН: СЕГОДНЯ -->
         <section id="view-today" class="view active">
-            <h1 class="view-title">Сегодня</h1>
+            <h1 class="view-title" id="today-title">Сегодня</h1>
             <p class="view-subtitle" id="today-subtitle"></p>
-            
             <div class="filters" id="today-filters"></div>
             <ul class="task-list" id="today-tasks"></ul>
         </section>
 
-        <!-- ЭКРАН: КАЛЕНДАРЬ -->
         <section id="view-calendar" class="view">
             <h1 class="view-title">Календарь</h1>
-            
             <div class="cal-nav">
                 <button onclick="changeYear(-1)">«</button>
                 <button onclick="changeMonth(-1)">‹</button>
@@ -401,7 +380,6 @@
                 <button onclick="changeMonth(1)">›</button>
                 <button onclick="changeYear(1)">»</button>
             </div>
-
             <div class="cal-grid">
                 <div class="cal-weekday">Пн</div><div class="cal-weekday">Вт</div>
                 <div class="cal-weekday">Ср</div><div class="cal-weekday">Чт</div>
@@ -409,12 +387,10 @@
                 <div class="cal-weekday">Вс</div>
             </div>
             <div class="cal-grid" id="cal-days" style="margin-top: -10px;"></div>
-
             <h2 style="font-size: 18px; margin: 20px 0 10px;" id="cal-day-title">Задачи на день</h2>
             <ul class="task-list" id="cal-tasks"></ul>
         </section>
 
-        <!-- ЭКРАН: КОРЗИНА -->
         <section id="view-trash" class="view">
             <h1 class="view-title">Корзина</h1>
             <p class="view-subtitle">Удаленные задачи</p>
@@ -423,7 +399,6 @@
 
     </main>
 
-    <!-- МОДАЛЬНОЕ ОКНО -->
     <div class="modal-overlay" id="modal">
         <div class="modal">
             <h3 id="modal-title">Новая задача</h3>
@@ -443,14 +418,38 @@
                     <input type="time" id="task-time">
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Длительность</label>
+                    <select id="task-duration">
+                        <option value="">Не указана</option>
+                        <option value="15">15 минут</option>
+                        <option value="30">30 минут</option>
+                        <option value="60">1 час</option>
+                        <option value="90">1 час 30 мин</option>
+                        <option value="120">2 часа</option>
+                        <option value="180">3 часа</option>
+                        <option value="custom">Своя...</option>
+                    </select>
+                </div>
+                <div class="form-group" id="custom-duration-group" style="display:none;">
+                    <label>Минуты</label>
+                    <input type="number" id="task-custom-duration" min="1" placeholder="60">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Повторение</label>
+                <select id="task-recurrence">
+                    <option value="none">Не повторять</option>
+                    <option value="daily">Ежедневно</option>
+                    <option value="weekly">Еженедельно</option>
+                    <option value="monthly">Ежемесячно</option>
+                    <option value="yearly">Ежегодно</option>
+                </select>
+            </div>
             <div class="form-group">
                 <label>Список</label>
-                <select id="task-list-select">
-                    <option value="Личное">Личное</option>
-                    <option value="Работа">Работа</option>
-                    <option value="Учёба">Учёба</option>
-                    <option value="Здоровье">Здоровье</option>
-                </select>
+                <select id="task-list-select"></select>
             </div>
             <div class="form-group">
                 <label>Заметка</label>
@@ -464,23 +463,28 @@
     </div>
 
     <script>
-        // ===== ДАННЫЕ =====
         let tasks = JSON.parse(localStorage.getItem('diary-tasks') || '[]');
         let trash = JSON.parse(localStorage.getItem('diary-trash') || '[]');
+        let lists = JSON.parse(localStorage.getItem('diary-lists') || '["Личное","Работа","Учёба","Здоровье"]');
         
         let calDate = new Date();
         let selectedCalDate = new Date();
         let activeFilter = 'Все';
-        const LISTS = ['Все', 'Личное', 'Работа', 'Учёба', 'Здоровье'];
+        let activeListFilter = null;
         const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-        // ===== НАВИГАЦИЯ И ВЬЮХИ =====
         function showView(viewName) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${viewName}`).classList.add('active');
             
             document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
-            event.target.closest('li')?.classList.add('active');
+            if (viewName === 'today') {
+                document.querySelector('.sidebar-menu li:nth-child(1)').classList.add('active');
+                activeListFilter = null;
+                document.getElementById('today-title').textContent = 'Сегодня';
+            }
+            if (viewName === 'calendar') document.querySelector('.sidebar-menu li:nth-child(2)').classList.add('active');
+            if (viewName === 'trash') document.querySelector('.sidebar-menu li:nth-child(3)').classList.add('active');
             
             toggleSidebar(false);
             if (viewName === 'today') renderToday();
@@ -496,7 +500,76 @@
             ov.classList.toggle('active', isActive);
         }
 
-        // ===== ЭКРАН: СЕГОДНЯ =====
+        function renderSidebarLists() {
+            const cont = document.getElementById('sidebar-lists');
+            cont.innerHTML = '';
+            lists.forEach(list => {
+                const count = tasks.filter(t => t.list === list && !t.completed).length;
+                const div = document.createElement('div');
+                div.className = 'list-item' + (activeListFilter === list ? ' active' : '');
+                div.innerHTML = `
+                    <span>${list}</span>
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <span class="list-count">${count}</span>
+                        <button class="list-delete" onclick="event.stopPropagation(); deleteList('${list}')">✕</button>
+                    </span>
+                `;
+                div.onclick = () => {
+                    activeListFilter = list;
+                    document.getElementById('today-title').textContent = list;
+                    document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
+                    document.querySelectorAll('.list-item').forEach(li => li.classList.remove('active'));
+                    div.classList.add('active');
+                    toggleSidebar(false);
+                    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                    document.getElementById('view-today').classList.add('active');
+                    renderToday();
+                };
+                cont.appendChild(div);
+            });
+        }
+
+        function addList() {
+            const name = prompt('Название нового списка:');
+            if (name && name.trim() && !lists.includes(name.trim())) {
+                lists.push(name.trim());
+                saveData();
+                renderSidebarLists();
+                updateListSelect();
+            }
+        }
+
+        function deleteList(name) {
+            const hasTasks = tasks.some(t => t.list === name);
+            if (hasTasks) {
+                if (!confirm(`В списке "${name}" есть задачи. Удалить список? Задачи останутся, но без категории.`)) return;
+                tasks.forEach(t => { if (t.list === name) t.list = 'Без списка'; });
+            } else {
+                if (!confirm(`Удалить список "${name}"?`)) return;
+            }
+            lists = lists.filter(l => l !== name);
+            if (activeListFilter === name) activeListFilter = null;
+            saveData();
+            renderSidebarLists();
+            updateListSelect();
+            refreshAll();
+        }
+
+        function updateListSelect() {
+            const sel = document.getElementById('task-list-select');
+            sel.innerHTML = '';
+            lists.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l;
+                opt.textContent = l;
+                sel.appendChild(opt);
+            });
+            const opt = document.createElement('option');
+            opt.value = 'Без списка';
+            opt.textContent = 'Без списка';
+            sel.appendChild(opt);
+        }
+
         function renderToday() {
             const today = new Date();
             const opts = { weekday: 'long', day: 'numeric', month: 'long' };
@@ -506,13 +579,16 @@
             
             const todayStr = formatDate(today.getFullYear(), today.getMonth(), today.getDate());
             let filtered = tasks.filter(t => t.date === todayStr);
-            if (activeFilter !== 'Все') filtered = filtered.filter(t => t.list === activeFilter);
+            if (activeListFilter) {
+                filtered = filtered.filter(t => t.list === activeListFilter);
+            } else if (activeFilter !== 'Все') {
+                filtered = filtered.filter(t => t.list === activeFilter);
+            }
             filtered.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
             renderTaskList('today-tasks', filtered);
         }
 
-        // ===== ЭКРАН: КАЛЕНДАРЬ =====
         function renderCalendar() {
             const year = calDate.getFullYear();
             const month = calDate.getMonth();
@@ -527,20 +603,17 @@
             grid.innerHTML = '';
             const today = new Date();
 
-            // Предыдущий месяц
             const prevMonthDays = new Date(year, month, 0).getDate();
             for (let i = startDay - 1; i >= 0; i--) {
                 grid.appendChild(createCalDay(prevMonthDays - i, true, year, month - 1));
             }
 
-            // Текущий месяц
             for (let d = 1; d <= daysInMonth; d++) {
                 const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
                 const isSelected = d === selectedCalDate.getDate() && month === selectedCalDate.getMonth() && year === selectedCalDate.getFullYear();
                 grid.appendChild(createCalDay(d, false, year, month, isToday, isSelected));
             }
 
-            // Следующий месяц
             const totalCells = startDay + daysInMonth;
             const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
             for (let d = 1; d <= remaining; d++) {
@@ -586,17 +659,31 @@
         function changeMonth(delta) { calDate.setMonth(calDate.getMonth() + delta); renderCalendar(); }
         function changeYear(delta) { calDate.setFullYear(calDate.getFullYear() + delta); renderCalendar(); }
 
-        // ===== РЕНДЕР ЗАДАЧ И ФИЛЬТРОВ =====
         function renderFilters(containerId) {
             const cont = document.getElementById(containerId);
             cont.innerHTML = '';
-            LISTS.forEach(list => {
+            const allLists = ['Все', ...lists];
+            allLists.forEach(list => {
                 const chip = document.createElement('div');
                 chip.className = 'filter-chip' + (list === activeFilter ? ' active' : '');
                 chip.textContent = list;
-                chip.onclick = () => { activeFilter = list; renderToday(); };
+                chip.onclick = () => { activeFilter = list; activeListFilter = null; renderToday(); };
                 cont.appendChild(chip);
             });
+        }
+
+        function formatDuration(min) {
+            if (!min) return '';
+            min = parseInt(min);
+            if (min < 60) return `${min} мин`;
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return m ? `${h} ч ${m} мин` : `${h} ч`;
+        }
+
+        function formatRecurrence(rec) {
+            const map = { daily: 'Ежедневно', weekly: 'Еженедельно', monthly: 'Ежемесячно', yearly: 'Ежегодно' };
+            return map[rec] || '';
         }
 
         function renderTaskList(containerId, taskArray) {
@@ -615,14 +702,17 @@
                     }
                 };
 
+                const meta = [];
+                if (task.time) meta.push(task.time);
+                if (task.duration) meta.push(formatDuration(task.duration));
+                if (task.recurrence && task.recurrence !== 'none') meta.push('🔁 ' + formatRecurrence(task.recurrence));
+                meta.push(task.list);
+
                 li.innerHTML = `
-                    <div class="task-checkbox" onclick="toggleDone('${task.id}')"></div>
+                    <div class="task-checkbox" onclick="event.stopPropagation(); toggleDone('${task.id}')"></div>
                     <div class="task-content">
                         <div class="task-name">${task.name}</div>
-                        <div class="task-meta">
-                            ${task.time ? `<span>${task.time}</span>` : ''}
-                            <span>${task.list}</span>
-                        </div>
+                        <div class="task-meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>
                     </div>
                     <div class="task-actions">
                         <button class="action-btn delete" onclick="event.stopPropagation(); deleteTask('${task.id}')">✕</button>
@@ -632,7 +722,6 @@
             });
         }
 
-        // ===== КОРЗИНА =====
         function renderTrash() {
             const listEl = document.getElementById('trash-tasks');
             listEl.innerHTML = '';
@@ -656,9 +745,13 @@
             });
         }
 
-        // ===== ДЕЙСТВИЯ С ЗАДАЧАМИ =====
         function openModal(taskId = null) {
             document.getElementById('modal').classList.add('active');
+            updateListSelect();
+            document.getElementById('task-duration').value = '';
+            document.getElementById('custom-duration-group').style.display = 'none';
+            document.getElementById('task-recurrence').value = 'none';
+
             if (taskId) {
                 const task = tasks.find(t => t.id === taskId);
                 document.getElementById('modal-title').textContent = 'Редактирование';
@@ -668,6 +761,18 @@
                 document.getElementById('task-time').value = task.time;
                 document.getElementById('task-list-select').value = task.list;
                 document.getElementById('task-note').value = task.note || '';
+                document.getElementById('task-recurrence').value = task.recurrence || 'none';
+                if (task.duration) {
+                    const durSel = document.getElementById('task-duration');
+                    const opts = ['', '15', '30', '60', '90', '120', '180'];
+                    if (opts.includes(String(task.duration))) {
+                        durSel.value = task.duration;
+                    } else {
+                        durSel.value = 'custom';
+                        document.getElementById('custom-duration-group').style.display = 'block';
+                        document.getElementById('task-custom-duration').value = task.duration;
+                    }
+                }
             } else {
                 document.getElementById('modal-title').textContent = 'Новая задача';
                 document.getElementById('task-id').value = '';
@@ -688,10 +793,18 @@
             if (!name) return alert('Введите название');
 
             const id = document.getElementById('task-id').value;
+            let duration = document.getElementById('task-duration').value;
+            if (duration === 'custom') {
+                duration = document.getElementById('task-custom-duration').value;
+            }
+            const recurrence = document.getElementById('task-recurrence').value;
+
             const taskData = {
                 name: name,
                 date: document.getElementById('task-date').value,
                 time: document.getElementById('task-time').value,
+                duration: duration,
+                recurrence: recurrence,
                 list: document.getElementById('task-list-select').value,
                 note: document.getElementById('task-note').value.trim()
             };
@@ -735,7 +848,6 @@
             }
         }
 
-        // ===== УТИЛИТЫ =====
         function formatDate(y, m, d) {
             return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         }
@@ -743,15 +855,22 @@
         function saveData() {
             localStorage.setItem('diary-tasks', JSON.stringify(tasks));
             localStorage.setItem('diary-trash', JSON.stringify(trash));
+            localStorage.setItem('diary-lists', JSON.stringify(lists));
         }
 
         function refreshAll() {
+            renderSidebarLists();
             if (document.getElementById('view-today').classList.contains('active')) renderToday();
             if (document.getElementById('view-calendar').classList.contains('active')) renderCalendar();
             if (document.getElementById('view-trash').classList.contains('active')) renderTrash();
         }
 
-        // Инициализация
+        document.getElementById('task-duration').addEventListener('change', function() {
+            document.getElementById('custom-duration-group').style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+
+        renderSidebarLists();
+        updateListSelect();
         renderToday();
     </script>
 </body>
