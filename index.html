@@ -148,20 +148,25 @@
         .list-item:hover { background: var(--bg); }
         .list-item.active { color: var(--accent); font-weight: 600; }
         .list-item .list-count { font-size: 13px; color: var(--text-secondary); }
-        .list-item .list-delete {
+        .list-item .list-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .list-item:hover .list-actions { opacity: 1; }
+        .list-item .list-actions button {
             background: none;
             border: none;
             color: var(--text-secondary);
             cursor: pointer;
             font-size: 14px;
             padding: 2px 6px;
-            opacity: 0;
-            transition: opacity 0.2s;
         }
-        .list-item:hover .list-delete { opacity: 1; }
-        .list-item .list-delete:hover { color: var(--danger); }
+        .list-item .list-actions button:hover { color: var(--accent); }
+        .list-item .list-actions button.delete:hover { color: var(--danger); }
 
-        .content { padding: 20px; max-width: 800px; margin: 0 auto; }
+        .content { padding: 20px; max-width: 100%; margin: 0 auto; }
 
         .view { display: none; }
         .view.active { display: block; }
@@ -191,11 +196,12 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             margin-bottom: 20px;
-            overflow: hidden;
         }
 
         .timeline-hours {
             position: relative;
+            overflow-x: auto;
+            overflow-y: visible;
         }
 
         .timeline-hour {
@@ -207,18 +213,17 @@
 
         .timeline-task {
             position: absolute;
-            background: var(--accent);
             color: white;
             border-radius: 6px;
             padding: 8px 12px;
             font-size: 13px;
             cursor: pointer;
-            overflow: hidden;
+            overflow: visible;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             transition: transform 0.2s;
             z-index: 10;
         }
-        .timeline-task:hover { transform: scale(1.02); }
+        .timeline-task:hover { transform: scale(1.02); z-index: 20; }
         .timeline-task.completed { opacity: 0.5; }
         .timeline-task-name { font-weight: 600; margin-bottom: 2px; }
         .timeline-task-time { font-size: 11px; opacity: 0.9; }
@@ -403,6 +408,40 @@
         .btn-save { background: var(--accent); color: white; }
         .btn-cancel { background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); }
 
+        .color-picker {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .color-option {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .color-option:hover { transform: scale(1.1); }
+        .color-option.selected { border-color: var(--text-primary); }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .checkbox-item:hover { background: var(--bg); }
+        .checkbox-item input { width: auto; }
+
         @media (max-width: 480px) {
             .form-row { flex-direction: column; gap: 0; }
             .modal { padding: 20px; }
@@ -430,7 +469,7 @@
         </ul>
         <div class="sidebar-section">
             <span>Списки</span>
-            <button onclick="addList()">+</button>
+            <button onclick="openListModal()">+</button>
         </div>
         <div id="sidebar-lists"></div>
     </nav>
@@ -524,8 +563,8 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Список</label>
-                <select id="task-list-select"></select>
+                <label>Списки</label>
+                <div class="checkbox-group" id="task-lists-checkboxes"></div>
             </div>
             <div class="form-group">
                 <label>Заметка</label>
@@ -538,7 +577,28 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="list-modal">
+        <div class="modal">
+            <h3 id="list-modal-title">Новый список</h3>
+            <input type="hidden" id="list-edit-index">
+            <div class="form-group">
+                <label>Название</label>
+                <input type="text" id="list-name" placeholder="Название списка">
+            </div>
+            <div class="form-group">
+                <label>Цвет</label>
+                <div class="color-picker" id="color-picker"></div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeListModal()">Отмена</button>
+                <button class="btn-save" onclick="saveList()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        const COLORS = ['#0071e3', '#34c759', '#ff9500', '#ff3b30', '#af52de', '#ff2d55', '#5ac8fa', '#ffcc00'];
+        
         let tasks = JSON.parse(localStorage.getItem('diary-tasks') || '[]');
         let trash = JSON.parse(localStorage.getItem('diary-trash') || '[]');
         let lists = JSON.parse(localStorage.getItem('diary-lists') || '[{"name":"Личное","color":"#0071e3"},{"name":"Работа","color":"#34c759"},{"name":"Учёба","color":"#ff9500"},{"name":"Здоровье","color":"#ff3b30"}]');
@@ -597,24 +657,26 @@
         function renderSidebarLists() {
             const cont = document.getElementById('sidebar-lists');
             cont.innerHTML = '';
-            lists.forEach(list => {
-                const listName = typeof list === 'string' ? list : list.name;
-                const count = tasks.filter(t => t.list === listName && !t.completed).length;
+            lists.forEach((list, index) => {
+                const count = tasks.filter(t => t.lists && t.lists.includes(list.name) && !t.completed).length;
                 const div = document.createElement('div');
-                div.className = 'list-item' + (activeListFilter === listName ? ' active' : '');
+                div.className = 'list-item' + (activeListFilter === list.name ? ' active' : '');
                 div.innerHTML = `
                     <span style="display:flex;align-items:center;gap:8px;">
-                        <span style="width:12px;height:12px;border-radius:50%;background:${list.color || '#0071e3'};"></span>
-                        ${listName}
+                        <span style="width:12px;height:12px;border-radius:50%;background:${list.color};"></span>
+                        ${list.name}
                     </span>
                     <span style="display:flex;align-items:center;gap:8px;">
                         <span class="list-count">${count}</span>
-                        <button class="list-delete" onclick="event.stopPropagation(); deleteList('${listName}')">✕</button>
+                        <span class="list-actions">
+                            <button onclick="event.stopPropagation(); openListModal(${index})">✎</button>
+                            <button class="delete" onclick="event.stopPropagation(); deleteList(${index})">✕</button>
+                        </span>
                     </span>
                 `;
                 div.onclick = () => {
-                    activeListFilter = listName;
-                    document.getElementById('today-title').textContent = listName;
+                    activeListFilter = list.name;
+                    document.getElementById('today-title').textContent = list.name;
                     document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
                     document.querySelectorAll('.list-item').forEach(li => li.classList.remove('active'));
                     div.classList.add('active');
@@ -627,55 +689,122 @@
             });
         }
 
-        function addList() {
-            const name = prompt('Название нового списка:');
-            if (!name || !name.trim()) return;
-            if (lists.some(l => (typeof l === 'string' ? l : l.name) === name.trim())) {
-                alert('Список с таким названием уже существует');
-                return;
+        function openListModal(index = null) {
+            document.getElementById('list-modal').classList.add('active');
+            const colorPicker = document.getElementById('color-picker');
+            colorPicker.innerHTML = '';
+            
+            COLORS.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'color-option';
+                div.style.background = color;
+                div.onclick = () => {
+                    document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
+                    div.classList.add('selected');
+                };
+                colorPicker.appendChild(div);
+            });
+
+            if (index !== null) {
+                const list = lists[index];
+                document.getElementById('list-modal-title').textContent = 'Редактировать список';
+                document.getElementById('list-edit-index').value = index;
+                document.getElementById('list-name').value = list.name;
+                const colorOption = Array.from(colorPicker.children).find(c => c.style.background === list.color || rgbToHex(c.style.background) === list.color);
+                if (colorOption) colorOption.classList.add('selected');
+            } else {
+                document.getElementById('list-modal-title').textContent = 'Новый список';
+                document.getElementById('list-edit-index').value = '';
+                document.getElementById('list-name').value = '';
+                colorPicker.children[0].classList.add('selected');
             }
-            const color = prompt('Цвет списка (HEX, например #0071e3):', '#0071e3');
-            if (!color) return;
-            lists.push({ name: name.trim(), color: color });
-            saveData();
-            renderSidebarLists();
-            updateListSelect();
         }
 
-        function deleteList(name) {
-            const hasTasks = tasks.some(t => t.list === name);
-            if (hasTasks) {
-                if (!confirm(`В списке "${name}" есть задачи. Удалить список? Задачи останутся, но без категории.`)) return;
-                tasks.forEach(t => { if (t.list === name) t.list = 'Без списка'; });
+        function closeListModal() {
+            document.getElementById('list-modal').classList.remove('active');
+        }
+
+        function saveList() {
+            const name = document.getElementById('list-name').value.trim();
+            if (!name) return alert('Введите название');
+            
+            const selectedColor = document.querySelector('.color-option.selected');
+            if (!selectedColor) return alert('Выберите цвет');
+            const color = rgbToHex(selectedColor.style.background);
+            
+            const editIndex = document.getElementById('list-edit-index').value;
+            
+            if (editIndex !== '') {
+                const oldName = lists[editIndex].name;
+                lists[editIndex].name = name;
+                lists[editIndex].color = color;
+                tasks.forEach(t => {
+                    if (t.lists && t.lists.includes(oldName)) {
+                        t.lists = t.lists.map(l => l === oldName ? name : l);
+                    }
+                });
             } else {
-                if (!confirm(`Удалить список "${name}"?`)) return;
+                if (lists.some(l => l.name === name)) {
+                    return alert('Список с таким названием уже существует');
+                }
+                lists.push({ name, color });
             }
-            lists = lists.filter(l => (typeof l === 'string' ? l : l.name) !== name);
-            if (activeListFilter === name) activeListFilter = null;
+            
             saveData();
+            closeListModal();
             renderSidebarLists();
-            updateListSelect();
+            updateListsCheckboxes();
             refreshAll();
         }
 
-        function updateListSelect() {
-            const sel = document.getElementById('task-list-select');
-            sel.innerHTML = '';
-            lists.forEach(l => {
-                const listName = typeof l === 'string' ? l : l.name;
-                const opt = document.createElement('option');
-                opt.value = listName;
-                opt.textContent = listName;
-                sel.appendChild(opt);
+        function deleteList(index) {
+            const list = lists[index];
+            const hasTasks = tasks.some(t => t.lists && t.lists.includes(list.name));
+            if (hasTasks) {
+                if (!confirm(`В списке "${list.name}" есть задачи. Удалить список? Задачи останутся, но без этой категории.`)) return;
+                tasks.forEach(t => {
+                    if (t.lists) {
+                        t.lists = t.lists.filter(l => l !== list.name);
+                    }
+                });
+            } else {
+                if (!confirm(`Удалить список "${list.name}"?`)) return;
+            }
+            lists.splice(index, 1);
+            if (activeListFilter === list.name) activeListFilter = null;
+            saveData();
+            renderSidebarLists();
+            updateListsCheckboxes();
+            refreshAll();
+        }
+
+        function rgbToHex(rgb) {
+            if (rgb.startsWith('#')) return rgb;
+            const result = rgb.match(/\d+/g);
+            if (!result) return rgb;
+            return '#' + result.slice(0, 3).map(x => {
+                const hex = parseInt(x).toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+        }
+
+        function updateListsCheckboxes() {
+            const cont = document.getElementById('task-lists-checkboxes');
+            cont.innerHTML = '';
+            lists.forEach(list => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-item';
+                label.innerHTML = `
+                    <input type="checkbox" value="${list.name}">
+                    <span style="width:12px;height:12px;border-radius:50%;background:${list.color};"></span>
+                    <span>${list.name}</span>
+                `;
+                cont.appendChild(label);
             });
-            const opt = document.createElement('option');
-            opt.value = 'Без списка';
-            opt.textContent = 'Без списка';
-            sel.appendChild(opt);
         }
 
         function getListColor(listName) {
-            const list = lists.find(l => (typeof l === 'string' ? l : l.name) === listName);
+            const list = lists.find(l => l.name === listName);
             return list?.color || '#0071e3';
         }
 
@@ -689,9 +818,9 @@
             const todayStr = formatDate(today.getFullYear(), today.getMonth(), today.getDate());
             let filtered = tasks.filter(t => t.date === todayStr);
             if (activeListFilter) {
-                filtered = filtered.filter(t => t.list === activeListFilter);
+                filtered = filtered.filter(t => t.lists && t.lists.includes(activeListFilter));
             } else if (activeFilter !== 'Все') {
-                filtered = filtered.filter(t => t.list === activeFilter);
+                filtered = filtered.filter(t => t.lists && t.lists.includes(activeFilter));
             }
 
             const withTime = [];
@@ -750,7 +879,6 @@
             if (isMobile) {
                 hours.style.height = `${TOTAL_SIZE}px`;
                 hours.style.width = '100%';
-                hours.style.overflowX = 'hidden';
                 
                 for (let h = 0; h < 24; h++) {
                     const hourDiv = document.createElement('div');
@@ -774,7 +902,7 @@
                     taskDiv.style.height = `${Math.max(durationMinutes * PIXELS_PER_MINUTE, 30)}px`;
                     taskDiv.style.left = `${70 + layout[task.id].column * 60}px`;
                     taskDiv.style.width = `${layout[task.id].width * 60 - 10}px`;
-                    taskDiv.style.background = getListColor(task.list);
+                    taskDiv.style.background = task.lists && task.lists[0] ? getListColor(task.lists[0]) : '#0071e3';
                     taskDiv.onclick = () => openModal(task.id);
 
                     taskDiv.innerHTML = `
@@ -784,10 +912,9 @@
                     hours.appendChild(taskDiv);
                 });
             } else {
-                hours.style.height = '120px';
+                const containerHeight = Math.max(window.innerHeight - 200, 400);
+                hours.style.height = `${containerHeight}px`;
                 hours.style.width = `${TOTAL_SIZE}px`;
-                hours.style.overflowX = 'auto';
-                hours.style.overflowY = 'hidden';
                 
                 for (let h = 0; h < 24; h++) {
                     const hourDiv = document.createElement('div');
@@ -799,6 +926,8 @@
                 }
 
                 const layout = calculateLayout(taskArray);
+                const taskHeight = Math.min((containerHeight - 40) / Math.max(layout.maxColumns, 1), 100);
+                
                 taskArray.forEach(task => {
                     if (!task.time) return;
                     const [hrs, mins] = task.time.split(':').map(Number);
@@ -809,9 +938,9 @@
                     taskDiv.className = 'timeline-task' + (task.completed ? ' completed' : '');
                     taskDiv.style.left = `${startMinutes * PIXELS_PER_MINUTE}px`;
                     taskDiv.style.width = `${Math.max(durationMinutes * PIXELS_PER_MINUTE, 30)}px`;
-                    taskDiv.style.top = `${30 + layout[task.id].column * 40}px`;
-                    taskDiv.style.height = `${layout[task.id].width * 40 - 5}px`;
-                    taskDiv.style.background = getListColor(task.list);
+                    taskDiv.style.top = `${30 + layout[task.id].column * (taskHeight + 5)}px`;
+                    taskDiv.style.height = `${taskHeight}px`;
+                    taskDiv.style.background = task.lists && task.lists[0] ? getListColor(task.lists[0]) : '#0071e3';
                     taskDiv.onclick = () => openModal(task.id);
 
                     taskDiv.innerHTML = `
@@ -826,6 +955,7 @@
         function calculateLayout(taskArray) {
             const layout = {};
             const columns = [];
+            let maxColumns = 0;
 
             taskArray.forEach(task => {
                 if (!task.time) return;
@@ -843,16 +973,12 @@
                     columns[column] = 0;
                 }
                 columns[column] = end;
+                maxColumns = Math.max(maxColumns, column + 1);
 
                 layout[task.id] = { column, width: 1 };
             });
 
-            const maxColumns = columns.length;
-            Object.keys(layout).forEach(id => {
-                layout[id].width = 1;
-            });
-
-            return layout;
+            return { layout, maxColumns };
         }
 
         function renderNoTimeTasks(taskArray) {
@@ -942,7 +1068,7 @@
         function renderFilters(containerId) {
             const cont = document.getElementById(containerId);
             cont.innerHTML = '';
-            const allLists = ['Все', ...lists.map(l => typeof l === 'string' ? l : l.name)];
+            const allLists = ['Все', ...lists.map(l => l.name)];
             allLists.forEach(list => {
                 const chip = document.createElement('div');
                 chip.className = 'filter-chip' + (list === activeFilter ? ' active' : '');
@@ -994,7 +1120,7 @@
                 if (task.time) meta.push(task.time);
                 if (task.durationValue && task.durationUnit) meta.push(formatDuration(task.durationValue, task.durationUnit));
                 if (task.recurrence && task.recurrence !== 'none') meta.push('🔁 ' + formatRecurrence(task.recurrence));
-                meta.push(task.list);
+                if (task.lists && task.lists.length > 0) meta.push(task.lists.join(', '));
 
                 li.innerHTML = `
                     <div class="task-checkbox" onclick="event.stopPropagation(); toggleDone('${task.id}')"></div>
@@ -1035,7 +1161,7 @@
 
         function openModal(taskId = null) {
             document.getElementById('modal').classList.add('active');
-            updateListSelect();
+            updateListsCheckboxes();
             document.getElementById('task-duration-value').value = '';
             document.getElementById('task-duration-unit').value = 'minutes';
             document.getElementById('task-recurrence').value = 'none';
@@ -1047,11 +1173,17 @@
                 document.getElementById('task-name').value = task.name;
                 document.getElementById('task-date').value = task.date;
                 document.getElementById('task-time').value = task.time;
-                document.getElementById('task-list-select').value = task.list;
                 document.getElementById('task-note').value = task.note || '';
                 document.getElementById('task-recurrence').value = task.recurrence || 'none';
                 document.getElementById('task-duration-value').value = task.durationValue || '';
                 document.getElementById('task-duration-unit').value = task.durationUnit || 'minutes';
+                
+                if (task.lists) {
+                    task.lists.forEach(listName => {
+                        const checkbox = document.querySelector(`#task-lists-checkboxes input[value="${listName}"]`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
             } else {
                 document.getElementById('modal-title').textContent = 'Новая задача';
                 document.getElementById('task-id').value = '';
@@ -1075,6 +1207,8 @@
             const durationValue = document.getElementById('task-duration-value').value;
             const durationUnit = document.getElementById('task-duration-unit').value;
             const recurrence = document.getElementById('task-recurrence').value;
+            
+            const selectedLists = Array.from(document.querySelectorAll('#task-lists-checkboxes input:checked')).map(cb => cb.value);
 
             const taskData = {
                 name: name,
@@ -1083,7 +1217,7 @@
                 durationValue: durationValue,
                 durationUnit: durationUnit,
                 recurrence: recurrence,
-                list: document.getElementById('task-list-select').value,
+                lists: selectedLists,
                 note: document.getElementById('task-note').value.trim()
             };
 
@@ -1145,7 +1279,7 @@
 
         initTheme();
         renderSidebarLists();
-        updateListSelect();
+        updateListsCheckboxes();
         renderToday();
     </script>
 </body>
