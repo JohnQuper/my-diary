@@ -14,6 +14,19 @@
             --accent: #0071e3;
             --danger: #ff3b30;
             --success: #34c759;
+            --timeline-bg: #fafafa;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1c1c1e;
+            --surface: #2c2c2e;
+            --text-primary: #f5f5f7;
+            --text-secondary: #98989d;
+            --border: #3a3a3c;
+            --accent: #0a84ff;
+            --danger: #ff453a;
+            --success: #30d158;
+            --timeline-bg: #242426;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -24,6 +37,7 @@
             color: var(--text-primary);
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
+            transition: background 0.3s, color 0.3s;
         }
 
         .header {
@@ -38,6 +52,10 @@
             justify-content: space-between;
             align-items: center;
             z-index: 50;
+        }
+
+        [data-theme="dark"] .header {
+            background: rgba(28,28,30,0.8);
         }
 
         .header-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
@@ -166,7 +184,70 @@
             color: var(--text-secondary);
             transition: all 0.2s;
         }
-        .filter-chip.active { background: var(--text-primary); color: white; border-color: var(--text-primary); }
+        .filter-chip.active { background: var(--text-primary); color: var(--bg); border-color: var(--text-primary); }
+
+        /* ===== ВРЕМЕННАЯ ШКАЛА ===== */
+        .timeline {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .timeline-hours {
+            position: relative;
+            height: 1440px; /* 24 часа * 60 пикселей на час */
+        }
+
+        .timeline-hour {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 60px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            padding: 4px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .timeline-task {
+            position: absolute;
+            left: 70px;
+            right: 12px;
+            background: var(--accent);
+            color: white;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .timeline-task:hover { transform: scale(1.02); }
+        .timeline-task.completed { opacity: 0.5; }
+        .timeline-task-name { font-weight: 600; margin-bottom: 2px; }
+        .timeline-task-time { font-size: 11px; opacity: 0.9; }
+
+        .no-time-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .no-time-section h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
         .task-list { list-style: none; }
 
@@ -260,10 +341,10 @@
         }
         .cal-day:hover { border-color: var(--border); }
         .cal-day.today { font-weight: 700; color: var(--accent); }
-        .cal-day.selected { background: var(--text-primary); color: white; font-weight: 600; }
+        .cal-day.selected { background: var(--text-primary); color: var(--bg); font-weight: 600; }
         .cal-day.other-month { color: var(--text-secondary); opacity: 0.4; background: transparent; }
         .cal-day .dot { width: 4px; height: 4px; background: var(--accent); border-radius: 50%; position: absolute; bottom: 6px; }
-        .cal-day.selected .dot { background: white; }
+        .cal-day.selected .dot { background: var(--bg); }
 
         .modal-overlay {
             display: none;
@@ -344,7 +425,10 @@
     <header class="header">
         <button class="icon-btn" onclick="toggleSidebar()">☰</button>
         <div class="header-title">Ежедневник</div>
-        <button class="icon-btn" onclick="openModal()">+</button>
+        <div style="display:flex;gap:8px;">
+            <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
+            <button class="icon-btn" onclick="openModal()">+</button>
+        </div>
     </header>
 
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -368,7 +452,13 @@
             <h1 class="view-title" id="today-title">Сегодня</h1>
             <p class="view-subtitle" id="today-subtitle"></p>
             <div class="filters" id="today-filters"></div>
-            <ul class="task-list" id="today-tasks"></ul>
+            <div class="timeline" id="timeline" style="display:none;">
+                <div class="timeline-hours" id="timeline-hours"></div>
+            </div>
+            <div class="no-time-section" id="no-time-section" style="display:none;">
+                <h3>Без времени / Многодневные</h3>
+                <ul class="task-list" id="no-time-tasks"></ul>
+            </div>
         </section>
 
         <section id="view-calendar" class="view">
@@ -421,20 +511,17 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Длительность</label>
-                    <select id="task-duration">
-                        <option value="">Не указана</option>
-                        <option value="15">15 минут</option>
-                        <option value="30">30 минут</option>
-                        <option value="60">1 час</option>
-                        <option value="90">1 час 30 мин</option>
-                        <option value="120">2 часа</option>
-                        <option value="180">3 часа</option>
-                        <option value="custom">Своя...</option>
-                    </select>
+                    <input type="number" id="task-duration-value" min="1" placeholder="1">
                 </div>
-                <div class="form-group" id="custom-duration-group" style="display:none;">
-                    <label>Минуты</label>
-                    <input type="number" id="task-custom-duration" min="1" placeholder="60">
+                <div class="form-group">
+                    <label>Единица</label>
+                    <select id="task-duration-unit">
+                        <option value="minutes">Минуты</option>
+                        <option value="hours">Часы</option>
+                        <option value="days">Дни</option>
+                        <option value="weeks">Недели</option>
+                        <option value="months">Месяцы</option>
+                    </select>
                 </div>
             </div>
             <div class="form-group">
@@ -473,6 +560,26 @@
         let activeListFilter = null;
         const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
+        // ===== ТЕМА =====
+        function initTheme() {
+            const saved = localStorage.getItem('diary-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+            updateThemeButton(saved);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('diary-theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // ===== НАВИГАЦИЯ =====
         function showView(viewName) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${viewName}`).classList.add('active');
@@ -500,6 +607,7 @@
             ov.classList.toggle('active', isActive);
         }
 
+        // ===== СПИСКИ =====
         function renderSidebarLists() {
             const cont = document.getElementById('sidebar-lists');
             cont.innerHTML = '';
@@ -570,6 +678,7 @@
             sel.appendChild(opt);
         }
 
+        // ===== СЕГОДНЯ =====
         function renderToday() {
             const today = new Date();
             const opts = { weekday: 'long', day: 'numeric', month: 'long' };
@@ -584,11 +693,92 @@
             } else if (activeFilter !== 'Все') {
                 filtered = filtered.filter(t => t.list === activeFilter);
             }
-            filtered.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
-            renderTaskList('today-tasks', filtered);
+            // Разделяем задачи с временем и без
+            const withTime = filtered.filter(t => t.time && canShowOnTimeline(t));
+            const withoutTime = filtered.filter(t => !t.time || !canShowOnTimeline(t));
+
+            withTime.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+            withoutTime.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+            renderTimeline(withTime);
+            renderNoTimeTasks(withoutTime);
         }
 
+        function canShowOnTimeline(task) {
+            if (!task.durationValue || !task.durationUnit) return true;
+            const minutes = convertToMinutes(task.durationValue, task.durationUnit);
+            return minutes <= 24 * 60; // Показываем только если <= 24 часа
+        }
+
+        function convertToMinutes(value, unit) {
+            const v = parseInt(value);
+            switch(unit) {
+                case 'minutes': return v;
+                case 'hours': return v * 60;
+                case 'days': return v * 24 * 60;
+                case 'weeks': return v * 7 * 24 * 60;
+                case 'months': return v * 30 * 24 * 60;
+                default: return v;
+            }
+        }
+
+        function renderTimeline(taskArray) {
+            const timeline = document.getElementById('timeline');
+            const hours = document.getElementById('timeline-hours');
+            
+            if (taskArray.length === 0) {
+                timeline.style.display = 'none';
+                return;
+            }
+
+            timeline.style.display = 'block';
+            hours.innerHTML = '';
+
+            // Создаем часы
+            for (let h = 0; h < 24; h++) {
+                const hourDiv = document.createElement('div');
+                hourDiv.className = 'timeline-hour';
+                hourDiv.style.top = `${h * 60}px`;
+                hourDiv.textContent = `${String(h).padStart(2, '0')}:00`;
+                hours.appendChild(hourDiv);
+            }
+
+            // Размещаем задачи
+            taskArray.forEach(task => {
+                const [hours, minutes] = task.time.split(':').map(Number);
+                const startMinutes = hours * 60 + minutes;
+                const durationMinutes = task.durationValue ? convertToMinutes(task.durationValue, task.durationUnit) : 60;
+                
+                const taskDiv = document.createElement('div');
+                taskDiv.className = 'timeline-task' + (task.completed ? ' completed' : '');
+                taskDiv.style.top = `${startMinutes}px`;
+                taskDiv.style.height = `${Math.max(durationMinutes, 30)}px`;
+                taskDiv.onclick = () => openModal(task.id);
+
+                taskDiv.innerHTML = `
+                    <div class="timeline-task-name">${task.name}</div>
+                    <div class="timeline-task-time">${task.time} • ${formatDuration(task.durationValue, task.durationUnit)}</div>
+                `;
+                hours.appendChild(taskDiv);
+            });
+        }
+
+        function renderNoTimeTasks(taskArray) {
+            const section = document.getElementById('no-time-section');
+            const listEl = document.getElementById('no-time-tasks');
+            
+            if (taskArray.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            listEl.innerHTML = '';
+            renderTaskListInto(listEl, taskArray);
+        }
+
+        // ===== КАЛЕНДАРЬ =====
         function renderCalendar() {
             const year = calDate.getFullYear();
             const month = calDate.getMonth();
@@ -659,6 +849,7 @@
         function changeMonth(delta) { calDate.setMonth(calDate.getMonth() + delta); renderCalendar(); }
         function changeYear(delta) { calDate.setFullYear(calDate.getFullYear() + delta); renderCalendar(); }
 
+        // ===== ФИЛЬТРЫ И ЗАДАЧИ =====
         function renderFilters(containerId) {
             const cont = document.getElementById(containerId);
             cont.innerHTML = '';
@@ -672,13 +863,17 @@
             });
         }
 
-        function formatDuration(min) {
-            if (!min) return '';
-            min = parseInt(min);
-            if (min < 60) return `${min} мин`;
-            const h = Math.floor(min / 60);
-            const m = min % 60;
-            return m ? `${h} ч ${m} мин` : `${h} ч`;
+        function formatDuration(value, unit) {
+            if (!value || !unit) return '';
+            const v = parseInt(value);
+            const units = {
+                'minutes': v === 1 ? 'минута' : (v < 5 ? 'минуты' : 'минут'),
+                'hours': v === 1 ? 'час' : (v < 5 ? 'часа' : 'часов'),
+                'days': v === 1 ? 'день' : (v < 5 ? 'дня' : 'дней'),
+                'weeks': v === 1 ? 'неделя' : (v < 5 ? 'недели' : 'недель'),
+                'months': v === 1 ? 'месяц' : (v < 5 ? 'месяца' : 'месяцев')
+            };
+            return `${v} ${units[unit]}`;
         }
 
         function formatRecurrence(rec) {
@@ -693,6 +888,10 @@
                 listEl.innerHTML = '<div class="empty-state">Нет задач</div>';
                 return;
             }
+            renderTaskListInto(listEl, taskArray);
+        }
+
+        function renderTaskListInto(listEl, taskArray) {
             taskArray.forEach(task => {
                 const li = document.createElement('li');
                 li.className = 'task-item' + (task.completed ? ' completed' : '');
@@ -704,7 +903,7 @@
 
                 const meta = [];
                 if (task.time) meta.push(task.time);
-                if (task.duration) meta.push(formatDuration(task.duration));
+                if (task.durationValue && task.durationUnit) meta.push(formatDuration(task.durationValue, task.durationUnit));
                 if (task.recurrence && task.recurrence !== 'none') meta.push('🔁 ' + formatRecurrence(task.recurrence));
                 meta.push(task.list);
 
@@ -745,11 +944,12 @@
             });
         }
 
+        // ===== МОДАЛКА =====
         function openModal(taskId = null) {
             document.getElementById('modal').classList.add('active');
             updateListSelect();
-            document.getElementById('task-duration').value = '';
-            document.getElementById('custom-duration-group').style.display = 'none';
+            document.getElementById('task-duration-value').value = '';
+            document.getElementById('task-duration-unit').value = 'minutes';
             document.getElementById('task-recurrence').value = 'none';
 
             if (taskId) {
@@ -762,17 +962,8 @@
                 document.getElementById('task-list-select').value = task.list;
                 document.getElementById('task-note').value = task.note || '';
                 document.getElementById('task-recurrence').value = task.recurrence || 'none';
-                if (task.duration) {
-                    const durSel = document.getElementById('task-duration');
-                    const opts = ['', '15', '30', '60', '90', '120', '180'];
-                    if (opts.includes(String(task.duration))) {
-                        durSel.value = task.duration;
-                    } else {
-                        durSel.value = 'custom';
-                        document.getElementById('custom-duration-group').style.display = 'block';
-                        document.getElementById('task-custom-duration').value = task.duration;
-                    }
-                }
+                document.getElementById('task-duration-value').value = task.durationValue || '';
+                document.getElementById('task-duration-unit').value = task.durationUnit || 'minutes';
             } else {
                 document.getElementById('modal-title').textContent = 'Новая задача';
                 document.getElementById('task-id').value = '';
@@ -793,17 +984,16 @@
             if (!name) return alert('Введите название');
 
             const id = document.getElementById('task-id').value;
-            let duration = document.getElementById('task-duration').value;
-            if (duration === 'custom') {
-                duration = document.getElementById('task-custom-duration').value;
-            }
+            const durationValue = document.getElementById('task-duration-value').value;
+            const durationUnit = document.getElementById('task-duration-unit').value;
             const recurrence = document.getElementById('task-recurrence').value;
 
             const taskData = {
                 name: name,
                 date: document.getElementById('task-date').value,
                 time: document.getElementById('task-time').value,
-                duration: duration,
+                durationValue: durationValue,
+                durationUnit: durationUnit,
                 recurrence: recurrence,
                 list: document.getElementById('task-list-select').value,
                 note: document.getElementById('task-note').value.trim()
@@ -865,10 +1055,8 @@
             if (document.getElementById('view-trash').classList.contains('active')) renderTrash();
         }
 
-        document.getElementById('task-duration').addEventListener('change', function() {
-            document.getElementById('custom-duration-group').style.display = this.value === 'custom' ? 'block' : 'none';
-        });
-
+        // Инициализация
+        initTheme();
         renderSidebarLists();
         updateListSelect();
         renderToday();
