@@ -389,7 +389,7 @@
             border-radius: 12px;
             padding: 24px;
             width: 100%;
-            max-width: 450px;
+            max-width: 500px;
             max-height: 90vh;
             overflow-y: auto;
         }
@@ -426,6 +426,33 @@
 
         .form-row { display: flex; gap: 12px; }
         .form-row .form-group { flex: 1; min-width: 0; }
+
+        .duration-inputs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .duration-inputs .form-group { margin-bottom: 0; }
+
+        .datetime-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .datetime-toggle button {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .datetime-toggle button.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
 
         .modal-buttons { display: flex; gap: 10px; margin-top: 24px; }
         .modal-buttons button {
@@ -506,7 +533,7 @@
         <ul class="sidebar-menu">
             <li class="active" onclick="showView('today')"><span class="menu-icon">•</span> Сегодня</li>
             <li onclick="showView('calendar')"><span class="menu-icon">▦</span> Календарь</li>
-            <li onclick="showView('trash')"><span class="menu-icon"></span> Корзина</li>
+            <li onclick="showView('trash')"><span class="menu-icon">🗑</span> Корзина</li>
         </ul>
         <div class="sidebar-section">
             <span>Списки</span>
@@ -586,22 +613,45 @@
                     <input type="time" id="task-time">
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Длительность</label>
-                    <input type="number" id="task-duration-value" min="1" placeholder="1">
+            
+            <div class="form-group">
+                <label>Длительность</label>
+                <div class="datetime-toggle">
+                    <button type="button" id="btn-duration" class="active" onclick="setDurationMode('simple')">Простая</button>
+                    <button type="button" id="btn-datetime" onclick="setDurationMode('datetime')">Дата/время окончания</button>
                 </div>
-                <div class="form-group">
-                    <label>Единица</label>
-                    <select id="task-duration-unit">
-                        <option value="minutes">Минуты</option>
-                        <option value="hours">Часы</option>
-                        <option value="days">Дни</option>
-                        <option value="weeks">Недели</option>
-                        <option value="months">Месяцы</option>
-                    </select>
+                
+                <div id="simple-duration">
+                    <div class="duration-inputs">
+                        <div class="form-group">
+                            <label>Дни</label>
+                            <input type="number" id="task-duration-days" min="0" placeholder="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Часы</label>
+                            <input type="number" id="task-duration-hours" min="0" max="23" placeholder="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Минуты</label>
+                            <input type="number" id="task-duration-minutes" min="0" max="59" placeholder="0" value="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="datetime-duration" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Дата окончания</label>
+                            <input type="date" id="task-end-date">
+                        </div>
+                        <div class="form-group">
+                            <label>Время окончания</label>
+                            <input type="time" id="task-end-time">
+                        </div>
+                    </div>
                 </div>
             </div>
+            
             <div class="form-group">
                 <label>Повторение</label>
                 <select id="task-recurrence">
@@ -657,6 +707,7 @@
         let selectedCalDate = new Date();
         let activeFilter = 'Все';
         let activeListFilter = null;
+        let durationMode = 'simple';
         const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
         function initTheme() {
@@ -674,7 +725,15 @@
         }
 
         function updateThemeButton(theme) {
-            document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '';
+            document.getElementById('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function setDurationMode(mode) {
+            durationMode = mode;
+            document.getElementById('btn-duration').classList.toggle('active', mode === 'simple');
+            document.getElementById('btn-datetime').classList.toggle('active', mode === 'datetime');
+            document.getElementById('simple-duration').style.display = mode === 'simple' ? 'block' : 'none';
+            document.getElementById('datetime-duration').style.display = mode === 'datetime' ? 'block' : 'none';
         }
 
         function showView(viewName) {
@@ -858,6 +917,16 @@
             return list?.color || '#0071e3';
         }
 
+        function getTaskBackground(lists) {
+            if (!lists || lists.length === 0) return '#0071e3';
+            if (lists.length === 1) return getListColor(lists[0]);
+            
+            const colors = lists.map(l => getListColor(l));
+            const width = 100 / colors.length;
+            const gradient = colors.map((color, i) => `${color} ${i * width}% ${(i + 1) * width}%`).join(', ');
+            return `linear-gradient(90deg, ${gradient})`;
+        }
+
         function renderToday() {
             const today = new Date();
             const opts = { weekday: 'long', day: 'numeric', month: 'long' };
@@ -910,6 +979,19 @@
             }
         }
 
+        function calculateTotalMinutes(task) {
+            if (task.durationMode === 'datetime' && task.endDate && task.endTime) {
+                const start = new Date(`${task.date}T${task.time || '00:00'}`);
+                const end = new Date(`${task.endDate}T${task.endTime}`);
+                return Math.max(0, (end - start) / 1000 / 60);
+            } else {
+                const days = parseInt(task.durationDays) || 0;
+                const hours = parseInt(task.durationHours) || 0;
+                const minutes = parseInt(task.durationMinutes) || 0;
+                return days * 24 * 60 + hours * 60 + minutes;
+            }
+        }
+
         function renderTimeline(taskArray) {
             const hours = document.getElementById('timeline-hours');
             
@@ -939,7 +1021,7 @@
                 if (!task.time) return;
                 const [hrs, mins] = task.time.split(':').map(Number);
                 const startMinutes = hrs * 60 + mins;
-                const durationMinutes = task.durationValue ? convertToMinutes(task.durationValue, task.durationUnit) : 60;
+                const durationMinutes = calculateTotalMinutes(task);
                 
                 const taskDiv = document.createElement('div');
                 taskDiv.className = 'timeline-task' + (task.completed ? ' completed' : '');
@@ -947,12 +1029,12 @@
                 taskDiv.style.width = `${Math.max(durationMinutes * PIXELS_PER_MINUTE, 30)}px`;
                 taskDiv.style.top = `${30 + layout[task.id].column * (taskHeight + 5)}px`;
                 taskDiv.style.height = `${taskHeight}px`;
-                taskDiv.style.background = task.lists && task.lists[0] ? getListColor(task.lists[0]) : '#0071e3';
+                taskDiv.style.background = getTaskBackground(task.lists);
                 taskDiv.onclick = () => openModal(task.id);
 
                 taskDiv.innerHTML = `
                     <div class="timeline-task-name">${task.name}</div>
-                    <div class="timeline-task-time">${task.time} • ${formatDuration(task.durationValue, task.durationUnit)}</div>
+                    <div class="timeline-task-time">${task.time} • ${formatTaskDuration(task)}</div>
                 `;
                 hours.appendChild(taskDiv);
             });
@@ -967,7 +1049,7 @@
                 if (!task.time) return;
                 const [hrs, mins] = task.time.split(':').map(Number);
                 const start = hrs * 60 + mins;
-                const duration = task.durationValue ? convertToMinutes(task.durationValue, task.durationUnit) : 60;
+                const duration = calculateTotalMinutes(task);
                 const end = start + duration;
 
                 let column = 0;
@@ -985,6 +1067,33 @@
             });
 
             return { layout, maxColumns };
+        }
+
+        function formatTaskDuration(task) {
+            if (task.durationMode === 'datetime' && task.endDate && task.endTime) {
+                const start = new Date(`${task.date}T${task.time || '00:00'}`);
+                const end = new Date(`${task.endDate}T${task.endTime}`);
+                const diffMs = end - start;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                
+                const parts = [];
+                if (diffDays > 0) parts.push(`${diffDays} дн`);
+                if (diffHours > 0) parts.push(`${diffHours} ч`);
+                if (diffMinutes > 0) parts.push(`${diffMinutes} мин`);
+                return parts.join(' ') || '0 мин';
+            } else {
+                const days = parseInt(task.durationDays) || 0;
+                const hours = parseInt(task.durationHours) || 0;
+                const minutes = parseInt(task.durationMinutes) || 0;
+                
+                const parts = [];
+                if (days > 0) parts.push(`${days} дн`);
+                if (hours > 0) parts.push(`${hours} ч`);
+                if (minutes > 0) parts.push(`${minutes} мин`);
+                return parts.join(' ') || '0 мин';
+            }
         }
 
         function renderAllTasks(taskArray) {
@@ -1094,19 +1203,6 @@
             });
         }
 
-        function formatDuration(value, unit) {
-            if (!value || !unit) return '';
-            const v = parseInt(value);
-            const units = {
-                'minutes': v === 1 ? 'минута' : (v < 5 ? 'минуты' : 'минут'),
-                'hours': v === 1 ? 'час' : (v < 5 ? 'часа' : 'часов'),
-                'days': v === 1 ? 'день' : (v < 5 ? 'дня' : 'дней'),
-                'weeks': v === 1 ? 'неделя' : (v < 5 ? 'недели' : 'недель'),
-                'months': v === 1 ? 'месяц' : (v < 5 ? 'месяца' : 'месяцев')
-            };
-            return `${v} ${units[unit]}`;
-        }
-
         function formatRecurrence(rec) {
             const map = { daily: 'Ежедневно', weekly: 'Еженедельно', monthly: 'Ежемесячно', yearly: 'Ежегодно' };
             return map[rec] || '';
@@ -1134,8 +1230,9 @@
 
                 const meta = [];
                 if (task.time) meta.push(task.time);
-                if (task.durationValue && task.durationUnit) meta.push(formatDuration(task.durationValue, task.durationUnit));
-                if (task.recurrence && task.recurrence !== 'none') meta.push('🔁 ' + formatRecurrence(task.recurrence));
+                const durationStr = formatTaskDuration(task);
+                if (durationStr && durationStr !== '0 мин') meta.push(durationStr);
+                if (task.recurrence && task.recurrence !== 'none') meta.push(' ' + formatRecurrence(task.recurrence));
                 if (task.lists && task.lists.length > 0) meta.push(task.lists.join(', '));
 
                 li.innerHTML = `
@@ -1179,8 +1276,12 @@
         function openModal(taskId = null) {
             document.getElementById('modal').classList.add('active');
             updateListsCheckboxes();
-            document.getElementById('task-duration-value').value = '';
-            document.getElementById('task-duration-unit').value = 'minutes';
+            setDurationMode('simple');
+            document.getElementById('task-duration-days').value = '0';
+            document.getElementById('task-duration-hours').value = '0';
+            document.getElementById('task-duration-minutes').value = '0';
+            document.getElementById('task-end-date').value = '';
+            document.getElementById('task-end-time').value = '';
             document.getElementById('task-recurrence').value = 'none';
 
             if (taskId) {
@@ -1192,8 +1293,17 @@
                 document.getElementById('task-time').value = task.time;
                 document.getElementById('task-note').value = task.note || '';
                 document.getElementById('task-recurrence').value = task.recurrence || 'none';
-                document.getElementById('task-duration-value').value = task.durationValue || '';
-                document.getElementById('task-duration-unit').value = task.durationUnit || 'minutes';
+                
+                if (task.durationMode === 'datetime') {
+                    setDurationMode('datetime');
+                    document.getElementById('task-end-date').value = task.endDate || '';
+                    document.getElementById('task-end-time').value = task.endTime || '';
+                } else {
+                    setDurationMode('simple');
+                    document.getElementById('task-duration-days').value = task.durationDays || '0';
+                    document.getElementById('task-duration-hours').value = task.durationHours || '0';
+                    document.getElementById('task-duration-minutes').value = task.durationMinutes || '0';
+                }
                 
                 if (task.lists) {
                     task.lists.forEach(listName => {
@@ -1221,22 +1331,27 @@
             if (!name) return alert('Введите название');
 
             const id = document.getElementById('task-id').value;
-            const durationValue = document.getElementById('task-duration-value').value;
-            const durationUnit = document.getElementById('task-duration-unit').value;
             const recurrence = document.getElementById('task-recurrence').value;
-            
             const selectedLists = Array.from(document.querySelectorAll('#task-lists-checkboxes input:checked')).map(cb => cb.value);
 
             const taskData = {
                 name: name,
                 date: document.getElementById('task-date').value,
                 time: document.getElementById('task-time').value,
-                durationValue: durationValue,
-                durationUnit: durationUnit,
+                durationMode: durationMode,
                 recurrence: recurrence,
                 lists: selectedLists,
                 note: document.getElementById('task-note').value.trim()
             };
+
+            if (durationMode === 'datetime') {
+                taskData.endDate = document.getElementById('task-end-date').value;
+                taskData.endTime = document.getElementById('task-end-time').value;
+            } else {
+                taskData.durationDays = document.getElementById('task-duration-days').value || '0';
+                taskData.durationHours = document.getElementById('task-duration-hours').value || '0';
+                taskData.durationMinutes = document.getElementById('task-duration-minutes').value || '0';
+            }
 
             if (id) {
                 const task = tasks.find(t => t.id === id);
