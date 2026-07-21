@@ -191,6 +191,7 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             margin-bottom: 20px;
+            overflow: hidden;
         }
 
         .timeline-hours {
@@ -202,7 +203,6 @@
             font-size: 12px;
             color: var(--text-secondary);
             font-weight: 500;
-            z-index: 1;
         }
 
         .timeline-task {
@@ -403,22 +403,6 @@
         .btn-save { background: var(--accent); color: white; }
         .btn-cancel { background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); }
 
-        .color-picker {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .color-option {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: border-color 0.2s;
-        }
-        .color-option:hover { border-color: var(--text-secondary); }
-        .color-option.selected { border-color: var(--text-primary); }
-
         @media (max-width: 480px) {
             .form-row { flex-direction: column; gap: 0; }
             .modal { padding: 20px; }
@@ -554,36 +538,16 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="list-modal">
-        <div class="modal">
-            <h3>Новый список</h3>
-            <div class="form-group">
-                <label>Название</label>
-                <input type="text" id="list-name" placeholder="Название списка">
-            </div>
-            <div class="form-group">
-                <label>Цвет</label>
-                <div class="color-picker" id="color-picker"></div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-cancel" onclick="closeListModal()">Отмена</button>
-                <button class="btn-save" onclick="saveList()">Создать</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         let tasks = JSON.parse(localStorage.getItem('diary-tasks') || '[]');
         let trash = JSON.parse(localStorage.getItem('diary-trash') || '[]');
-        let lists = JSON.parse(localStorage.getItem('diary-lists') || '[{"name":"Личное","color":"#0071e3"},{"name":"Работа","color":"#ff9500"},{"name":"Учёба","color":"#34c759"},{"name":"Здоровье","color":"#ff3b30"}]');
+        let lists = JSON.parse(localStorage.getItem('diary-lists') || '[{"name":"Личное","color":"#0071e3"},{"name":"Работа","color":"#34c759"},{"name":"Учёба","color":"#ff9500"},{"name":"Здоровье","color":"#ff3b30"}]');
         
         let calDate = new Date();
         let selectedCalDate = new Date();
         let activeFilter = 'Все';
         let activeListFilter = null;
-        let selectedColor = '#0071e3';
         const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-        const COLORS = ['#0071e3', '#ff9500', '#34c759', '#ff3b30', '#af52de', '#ff2d55', '#5ac8fa', '#ffcc00'];
 
         function initTheme() {
             const saved = localStorage.getItem('diary-theme') || 'light';
@@ -630,31 +594,27 @@
             ov.classList.toggle('active', isActive);
         }
 
-        function getListColor(listName) {
-            const list = lists.find(l => l.name === listName);
-            return list ? list.color : '#0071e3';
-        }
-
         function renderSidebarLists() {
             const cont = document.getElementById('sidebar-lists');
             cont.innerHTML = '';
             lists.forEach(list => {
-                const count = tasks.filter(t => t.list === list.name && !t.completed).length;
+                const listName = typeof list === 'string' ? list : list.name;
+                const count = tasks.filter(t => t.list === listName && !t.completed).length;
                 const div = document.createElement('div');
-                div.className = 'list-item' + (activeListFilter === list.name ? ' active' : '');
+                div.className = 'list-item' + (activeListFilter === listName ? ' active' : '');
                 div.innerHTML = `
                     <span style="display:flex;align-items:center;gap:8px;">
-                        <span style="width:12px;height:12px;border-radius:50%;background:${list.color};"></span>
-                        ${list.name}
+                        <span style="width:12px;height:12px;border-radius:50%;background:${list.color || '#0071e3'};"></span>
+                        ${listName}
                     </span>
                     <span style="display:flex;align-items:center;gap:8px;">
                         <span class="list-count">${count}</span>
-                        <button class="list-delete" onclick="event.stopPropagation(); deleteList('${list.name}')">✕</button>
+                        <button class="list-delete" onclick="event.stopPropagation(); deleteList('${listName}')">✕</button>
                     </span>
                 `;
                 div.onclick = () => {
-                    activeListFilter = list.name;
-                    document.getElementById('today-title').textContent = list.name;
+                    activeListFilter = listName;
+                    document.getElementById('today-title').textContent = listName;
                     document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
                     document.querySelectorAll('.list-item').forEach(li => li.classList.remove('active'));
                     div.classList.add('active');
@@ -668,40 +628,16 @@
         }
 
         function addList() {
-            document.getElementById('list-modal').classList.add('active');
-            document.getElementById('list-name').value = '';
-            renderColorPicker();
-        }
-
-        function closeListModal() {
-            document.getElementById('list-modal').classList.remove('active');
-        }
-
-        function renderColorPicker() {
-            const picker = document.getElementById('color-picker');
-            picker.innerHTML = '';
-            COLORS.forEach(color => {
-                const div = document.createElement('div');
-                div.className = 'color-option' + (color === selectedColor ? ' selected' : '');
-                div.style.background = color;
-                div.onclick = () => {
-                    selectedColor = color;
-                    renderColorPicker();
-                };
-                picker.appendChild(div);
-            });
-        }
-
-        function saveList() {
-            const name = document.getElementById('list-name').value.trim();
-            if (!name) return alert('Введите название списка');
-            
-            const exists = lists.find(l => l.name === name);
-            if (exists) return alert('Список с таким названием уже существует');
-
-            lists.push({ name: name, color: selectedColor });
+            const name = prompt('Название нового списка:');
+            if (!name || !name.trim()) return;
+            if (lists.some(l => (typeof l === 'string' ? l : l.name) === name.trim())) {
+                alert('Список с таким названием уже существует');
+                return;
+            }
+            const color = prompt('Цвет списка (HEX, например #0071e3):', '#0071e3');
+            if (!color) return;
+            lists.push({ name: name.trim(), color: color });
             saveData();
-            closeListModal();
             renderSidebarLists();
             updateListSelect();
         }
@@ -714,7 +650,7 @@
             } else {
                 if (!confirm(`Удалить список "${name}"?`)) return;
             }
-            lists = lists.filter(l => l.name !== name);
+            lists = lists.filter(l => (typeof l === 'string' ? l : l.name) !== name);
             if (activeListFilter === name) activeListFilter = null;
             saveData();
             renderSidebarLists();
@@ -726,15 +662,21 @@
             const sel = document.getElementById('task-list-select');
             sel.innerHTML = '';
             lists.forEach(l => {
+                const listName = typeof l === 'string' ? l : l.name;
                 const opt = document.createElement('option');
-                opt.value = l.name;
-                opt.textContent = l.name;
+                opt.value = listName;
+                opt.textContent = listName;
                 sel.appendChild(opt);
             });
             const opt = document.createElement('option');
             opt.value = 'Без списка';
             opt.textContent = 'Без списка';
             sel.appendChild(opt);
+        }
+
+        function getListColor(listName) {
+            const list = lists.find(l => (typeof l === 'string' ? l : l.name) === listName);
+            return list?.color || '#0071e3';
         }
 
         function renderToday() {
@@ -801,36 +743,37 @@
             hours.innerHTML = '';
             
             const isMobile = window.innerWidth < 768;
+            const PIXELS_PER_MINUTE = 1;
+            const TOTAL_MINUTES = 24 * 60;
+            const TOTAL_SIZE = TOTAL_MINUTES * PIXELS_PER_MINUTE;
 
             if (isMobile) {
-                hours.style.height = '1440px';
+                hours.style.height = `${TOTAL_SIZE}px`;
                 hours.style.width = '100%';
-                hours.style.overflow = 'visible';
+                hours.style.overflowX = 'hidden';
                 
                 for (let h = 0; h < 24; h++) {
                     const hourDiv = document.createElement('div');
                     hourDiv.className = 'timeline-hour';
-                    hourDiv.style.top = `${h * 60}px`;
-                    hourDiv.style.left = '0';
-                    hourDiv.style.width = '60px';
+                    hourDiv.style.top = `${h * 60 * PIXELS_PER_MINUTE}px`;
+                    hourDiv.style.left = '12px';
                     hourDiv.textContent = `${String(h).padStart(2, '0')}:00`;
                     hours.appendChild(hourDiv);
                 }
 
-                const columns = layoutTasks(taskArray);
+                const layout = calculateLayout(taskArray);
                 taskArray.forEach(task => {
                     if (!task.time) return;
                     const [hrs, mins] = task.time.split(':').map(Number);
                     const startMinutes = hrs * 60 + mins;
                     const durationMinutes = task.durationValue ? convertToMinutes(task.durationValue, task.durationUnit) : 60;
-                    const col = columns.get(task.id);
                     
                     const taskDiv = document.createElement('div');
                     taskDiv.className = 'timeline-task' + (task.completed ? ' completed' : '');
-                    taskDiv.style.top = `${startMinutes}px`;
-                    taskDiv.style.height = `${Math.max(durationMinutes, 30)}px`;
-                    taskDiv.style.left = `${70 + col.index * 110}px`;
-                    taskDiv.style.width = `${100}px`;
+                    taskDiv.style.top = `${startMinutes * PIXELS_PER_MINUTE}px`;
+                    taskDiv.style.height = `${Math.max(durationMinutes * PIXELS_PER_MINUTE, 30)}px`;
+                    taskDiv.style.left = `${70 + layout[task.id].column * 60}px`;
+                    taskDiv.style.width = `${layout[task.id].width * 60 - 10}px`;
                     taskDiv.style.background = getListColor(task.list);
                     taskDiv.onclick = () => openModal(task.id);
 
@@ -842,38 +785,32 @@
                 });
             } else {
                 hours.style.height = '120px';
-                hours.style.width = '1440px';
-                hours.style.overflow = 'visible';
+                hours.style.width = `${TOTAL_SIZE}px`;
+                hours.style.overflowX = 'auto';
+                hours.style.overflowY = 'hidden';
                 
                 for (let h = 0; h < 24; h++) {
                     const hourDiv = document.createElement('div');
                     hourDiv.className = 'timeline-hour';
-                    hourDiv.style.left = `${h * 60}px`;
+                    hourDiv.style.left = `${h * 60 * PIXELS_PER_MINUTE}px`;
                     hourDiv.style.top = '0';
-                    hourDiv.style.width = '60px';
-                    hourDiv.style.height = '30px';
-                    hourDiv.style.display = 'flex';
-                    hourDiv.style.alignItems = 'center';
-                    hourDiv.style.justifyContent = 'center';
-                    hourDiv.style.borderLeft = '1px solid var(--border)';
                     hourDiv.textContent = `${String(h).padStart(2, '0')}:00`;
                     hours.appendChild(hourDiv);
                 }
 
-                const columns = layoutTasks(taskArray);
+                const layout = calculateLayout(taskArray);
                 taskArray.forEach(task => {
                     if (!task.time) return;
                     const [hrs, mins] = task.time.split(':').map(Number);
                     const startMinutes = hrs * 60 + mins;
                     const durationMinutes = task.durationValue ? convertToMinutes(task.durationValue, task.durationUnit) : 60;
-                    const col = columns.get(task.id);
                     
                     const taskDiv = document.createElement('div');
                     taskDiv.className = 'timeline-task' + (task.completed ? ' completed' : '');
-                    taskDiv.style.left = `${startMinutes}px`;
-                    taskDiv.style.width = `${Math.max(durationMinutes, 30)}px`;
-                    taskDiv.style.top = `${40 + col.index * 80}px`;
-                    taskDiv.style.height = `70px`;
+                    taskDiv.style.left = `${startMinutes * PIXELS_PER_MINUTE}px`;
+                    taskDiv.style.width = `${Math.max(durationMinutes * PIXELS_PER_MINUTE, 30)}px`;
+                    taskDiv.style.top = `${30 + layout[task.id].column * 40}px`;
+                    taskDiv.style.height = `${layout[task.id].width * 40 - 5}px`;
                     taskDiv.style.background = getListColor(task.list);
                     taskDiv.onclick = () => openModal(task.id);
 
@@ -886,49 +823,36 @@
             }
         }
 
-        function layoutTasks(taskArray) {
-            const columns = new Map();
-            const sortedTasks = [...taskArray].sort((a, b) => {
-                const [aHrs, aMins] = a.time.split(':').map(Number);
-                const [bHrs, bMins] = b.time.split(':').map(Number);
-                const aStart = aHrs * 60 + aMins;
-                const bStart = bHrs * 60 + bMins;
-                return aStart - bStart;
-            });
+        function calculateLayout(taskArray) {
+            const layout = {};
+            const columns = [];
 
-            sortedTasks.forEach(task => {
+            taskArray.forEach(task => {
+                if (!task.time) return;
                 const [hrs, mins] = task.time.split(':').map(Number);
                 const start = hrs * 60 + mins;
                 const duration = task.durationValue ? convertToMinutes(task.durationValue, task.durationUnit) : 60;
                 const end = start + duration;
 
-                let columnIndex = 0;
-                let placed = false;
-
-                while (!placed) {
-                    const conflict = sortedTasks.some(other => {
-                        if (other.id === task.id) return false;
-                        const otherCol = columns.get(other.id);
-                        if (!otherCol || otherCol.index !== columnIndex) return false;
-                        
-                        const [oHrs, oMins] = other.time.split(':').map(Number);
-                        const oStart = oHrs * 60 + oMins;
-                        const oDuration = other.durationValue ? convertToMinutes(other.durationValue, other.durationUnit) : 60;
-                        const oEnd = oStart + oDuration;
-
-                        return start < oEnd && end > oStart;
-                    });
-
-                    if (!conflict) {
-                        columns.set(task.id, { index: columnIndex });
-                        placed = true;
-                    } else {
-                        columnIndex++;
-                    }
+                let column = 0;
+                while (columns[column] && columns[column] > start) {
+                    column++;
                 }
+
+                if (!columns[column]) {
+                    columns[column] = 0;
+                }
+                columns[column] = end;
+
+                layout[task.id] = { column, width: 1 };
             });
 
-            return columns;
+            const maxColumns = columns.length;
+            Object.keys(layout).forEach(id => {
+                layout[id].width = 1;
+            });
+
+            return layout;
         }
 
         function renderNoTimeTasks(taskArray) {
@@ -1018,7 +942,7 @@
         function renderFilters(containerId) {
             const cont = document.getElementById(containerId);
             cont.innerHTML = '';
-            const allLists = ['Все', ...lists.map(l => l.name)];
+            const allLists = ['Все', ...lists.map(l => typeof l === 'string' ? l : l.name)];
             allLists.forEach(list => {
                 const chip = document.createElement('div');
                 chip.className = 'filter-chip' + (list === activeFilter ? ' active' : '');
