@@ -502,10 +502,10 @@
 <body>
 
     <header class="header">
-        <button class="icon-btn" onclick="toggleSidebar()">☰</button>
+        <button class="icon-btn" onclick="toggleSidebar()"></button>
         <div class="header-title">Ежедневник</div>
         <div style="display:flex;gap:8px;">
-            <button class="icon-btn" onclick="toggleTheme()" id="theme-btn"></button>
+            <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
             <button class="icon-btn" onclick="openModal()">+</button>
         </div>
     </header>
@@ -1033,7 +1033,20 @@
             
             hours.style.minWidth = `${TOTAL_SIZE}px`;
             
-            for (let h = 0; h < 24; h++) {
+            // Умное отображение часовых меток
+            const MIN_LABEL_SPACING = 50; // минимальное расстояние между метками в пикселях
+            let hourStep = 1;
+            if (isMobile) {
+                const pixelsPerHour = 60 * PIXELS_PER_MINUTE;
+                if (pixelsPerHour < MIN_LABEL_SPACING) {
+                    hourStep = Math.ceil(MIN_LABEL_SPACING / pixelsPerHour);
+                    // Округляем до удобного значения: 1, 2, 3, 4, 6
+                    const steps = [1, 2, 3, 4, 6, 12];
+                    hourStep = steps.find(s => s >= hourStep) || 12;
+                }
+            }
+            
+            for (let h = 0; h < 24; h += hourStep) {
                 const hourMinutes = h * 60;
                 if (hourMinutes < minMinutes || hourMinutes > maxMinutes) continue;
                 
@@ -1054,7 +1067,6 @@
                 const startMinutes = hrs * 60 + mins;
                 let durationMinutes = calculateTotalMinutes(task);
                 
-                // Обрезаем длительность, если задача выходит за пределы дня
                 const remainingInDay = 24 * 60 - startMinutes;
                 let isTruncated = false;
                 if (durationMinutes > remainingInDay) {
@@ -1287,7 +1299,7 @@
                     actionsHtml = `
                         <div class="task-actions">
                             <button class="action-btn" onclick="event.stopPropagation(); toggleDone('${task.id}')" title="Вернуть в активные">↩</button>
-                            <button class="action-btn delete" onclick="event.stopPropagation(); deleteTask('${task.id}')" title="Удалить"></button>
+                            <button class="action-btn delete" onclick="event.stopPropagation(); deleteTask('${task.id}')" title="Удалить">✕</button>
                         </div>
                     `;
                 } else {
@@ -1327,7 +1339,7 @@
                     </div>
                     <div class="task-actions">
                         <button class="action-btn" onclick="restoreTask('${task.id}')" style="color:var(--accent)" title="Восстановить">↩</button>
-                        <button class="action-btn permanent-delete" onclick="event.stopPropagation(); permanentDeleteTask('${task.id}')" style="color:var(--danger)" title="Удалить навсегда"></button>
+                        <button class="action-btn permanent-delete" onclick="event.stopPropagation(); permanentDeleteTask('${task.id}')" style="color:var(--danger)" title="Удалить навсегда">✕</button>
                     </div>
                 `;
                 listEl.appendChild(li);
