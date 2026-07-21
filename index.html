@@ -201,7 +201,6 @@
 
         .timeline {
             position: relative;
-            min-width: 1440px;
         }
 
         .timeline-hours {
@@ -922,9 +921,9 @@
             if (lists.length === 1) return getListColor(lists[0]);
             
             const colors = lists.map(l => getListColor(l));
-            const width = 100 / colors.length;
-            const gradient = colors.map((color, i) => `${color} ${i * width}% ${(i + 1) * width}%`).join(', ');
-            return `linear-gradient(90deg, ${gradient})`;
+            const height = 100 / colors.length;
+            const gradient = colors.map((color, i) => `${color} ${i * height}% ${(i + 1) * height}%`).join(', ');
+            return `linear-gradient(180deg, ${gradient})`;
         }
 
         function renderToday() {
@@ -962,21 +961,9 @@
         }
 
         function canShowOnTimeline(task) {
-            if (!task.durationValue || !task.durationUnit) return true;
-            const minutes = convertToMinutes(task.durationValue, task.durationUnit);
+            if (!task.durationMode && (!task.durationValue || !task.durationUnit)) return true;
+            const minutes = calculateTotalMinutes(task);
             return minutes <= 24 * 60;
-        }
-
-        function convertToMinutes(value, unit) {
-            const v = parseInt(value);
-            switch(unit) {
-                case 'minutes': return v;
-                case 'hours': return v * 60;
-                case 'days': return v * 24 * 60;
-                case 'weeks': return v * 7 * 24 * 60;
-                case 'months': return v * 30 * 24 * 60;
-                default: return v;
-            }
         }
 
         function calculateTotalMinutes(task) {
@@ -994,27 +981,68 @@
 
         function renderTimeline(taskArray) {
             const hours = document.getElementById('timeline-hours');
+            const isMobile = window.innerWidth < 768;
             
             if (taskArray.length === 0) {
                 hours.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary)">Нет задач с временем на сегодня</div>';
+                hours.style.minWidth = '100%';
                 return;
             }
 
             hours.innerHTML = '';
-            const PIXELS_PER_MINUTE = 1;
-            const TOTAL_MINUTES = 24 * 60;
-            const TOTAL_SIZE = TOTAL_MINUTES * PIXELS_PER_MINUTE;
-
+            
+            // Находим min и max время среди задач
+            let minMinutes = 24 * 60;
+            let maxMinutes = 0;
+            
+            taskArray.forEach(task => {
+                if (!task.time) return;
+                const [hrs, mins] = task.time.split(':').map(Number);
+                const startMinutes = hrs * 60 + mins;
+                const duration = calculateTotalMinutes(task);
+                const endMinutes = startMinutes + duration;
+                
+                minMinutes = Math.min(minMinutes, startMinutes);
+                maxMinutes = Math.max(maxMinutes, endMinutes);
+            });
+            
+            // Добавляем отступы по 30 минут
+            const PADDING = 30;
+            minMinutes = Math.max(0, minMinutes - PADDING);
+            maxMinutes = Math.min(24 * 60, maxMinutes + PADDING);
+            
+            const rangeMinutes = maxMinutes - minMinutes;
+            
+            let PIXELS_PER_MINUTE;
+            let TOTAL_SIZE;
+            
+            if (isMobile) {
+                // На мобильном подстраиваем масштаб под экран
+                const screenWidth = window.innerWidth - 40; // отступы
+                PIXELS_PER_MINUTE = Math.max(0.5, screenWidth / rangeMinutes);
+                TOTAL_SIZE = rangeMinutes * PIXELS_PER_MINUTE;
+            } else {
+                // На ПК фиксированный масштаб
+                PIXELS_PER_MINUTE = 1;
+                TOTAL_SIZE = 24 * 60 * PIXELS_PER_MINUTE;
+            }
+            
+            hours.style.minWidth = `${TOTAL_SIZE}px`;
+            
+            // Рисуем часовые метки
             for (let h = 0; h < 24; h++) {
+                const hourMinutes = h * 60;
+                if (hourMinutes < minMinutes || hourMinutes > maxMinutes) continue;
+                
                 const hourDiv = document.createElement('div');
                 hourDiv.className = 'timeline-hour';
-                hourDiv.style.left = `${h * 60 * PIXELS_PER_MINUTE}px`;
+                hourDiv.style.left = `${(hourMinutes - minMinutes) * PIXELS_PER_MINUTE}px`;
                 hourDiv.style.top = '0';
                 hourDiv.textContent = `${String(h).padStart(2, '0')}:00`;
                 hours.appendChild(hourDiv);
             }
 
-            const { layout, maxColumns } = calculateLayout(taskArray);
+            const { layout, maxColumns } = calculateLayout(taskArray, minMinutes);
             const taskHeight = Math.min(80, (600 - 40) / Math.max(maxColumns, 1));
             
             taskArray.forEach(task => {
@@ -1025,7 +1053,7 @@
                 
                 const taskDiv = document.createElement('div');
                 taskDiv.className = 'timeline-task' + (task.completed ? ' completed' : '');
-                taskDiv.style.left = `${startMinutes * PIXELS_PER_MINUTE}px`;
+                taskDiv.style.left = `${(startMinutes - minMinutes) * PIXELS_PER_MINUTE}px`;
                 taskDiv.style.width = `${Math.max(durationMinutes * PIXELS_PER_MINUTE, 30)}px`;
                 taskDiv.style.top = `${30 + layout[task.id].column * (taskHeight + 5)}px`;
                 taskDiv.style.height = `${taskHeight}px`;
@@ -1040,7 +1068,7 @@
             });
         }
 
-        function calculateLayout(taskArray) {
+        function calculateLayout(taskArray, minMinutes = 0) {
             const layout = {};
             const columns = [];
             let maxColumns = 0;
@@ -1242,7 +1270,7 @@
                         <div class="task-meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>
                     </div>
                     <div class="task-actions">
-                        <button class="action-btn delete" onclick="event.stopPropagation(); deleteTask('${task.id}')">✕</button>
+                        <button class="action-btn delete" onclick="event.stopPropagation(); deleteTask('${task.id}')"></button>
                     </div>
                 `;
                 listEl.appendChild(li);
@@ -1265,8 +1293,8 @@
                         <div class="task-meta"><span>${task.date} ${task.time || ''}</span></div>
                     </div>
                     <div class="task-actions">
-                        <button class="action-btn" onclick="restoreTask('${task.id}')" style="color:var(--accent)">↩</button>
-                        <button class="action-btn permanent-delete" onclick="event.stopPropagation(); permanentDeleteTask('${task.id}')" style="color:var(--danger)"></button>
+                        <button class="action-btn" onclick="restoreTask('${task.id}')" style="color:var(--accent)" title="Восстановить">↩</button>
+                        <button class="action-btn permanent-delete" onclick="event.stopPropagation(); permanentDeleteTask('${task.id}')" style="color:var(--danger)" title="Удалить навсегда">✕</button>
                     </div>
                 `;
                 listEl.appendChild(li);
