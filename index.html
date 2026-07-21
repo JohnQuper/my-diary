@@ -189,7 +189,6 @@
         }
         .filter-chip.active { background: var(--text-primary); color: var(--bg); border-color: var(--text-primary); }
 
-        /* ===== ВРЕМЕННАЯ ШКАЛА ===== */
         .timeline-wrapper {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -234,29 +233,14 @@
         .timeline-task-name { font-weight: 600; margin-bottom: 2px; }
         .timeline-task-time { font-size: 11px; opacity: 0.9; }
 
-        .all-tasks-section {
+        .all-tasks-section, .no-time-section, .completed-section {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 16px;
             margin-bottom: 20px;
         }
-        .all-tasks-section h3 {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .no-time-section {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-        .no-time-section h3 {
+        .all-tasks-section h3, .no-time-section h3, .completed-section h3 {
             font-size: 14px;
             color: var(--text-secondary);
             margin-bottom: 12px;
@@ -521,7 +505,7 @@
         <button class="icon-btn" onclick="toggleSidebar()">☰</button>
         <div class="header-title">Ежедневник</div>
         <div style="display:flex;gap:8px;">
-            <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
+            <button class="icon-btn" onclick="toggleTheme()" id="theme-btn"></button>
             <button class="icon-btn" onclick="openModal()">+</button>
         </div>
     </header>
@@ -531,6 +515,7 @@
         <div class="sidebar-header">Меню</div>
         <ul class="sidebar-menu">
             <li class="active" onclick="showView('today')"><span class="menu-icon">•</span> Сегодня</li>
+            <li onclick="showView('completed')"><span class="menu-icon">✓</span> Выполненные</li>
             <li onclick="showView('calendar')"><span class="menu-icon">▦</span> Календарь</li>
             <li onclick="showView('trash')"><span class="menu-icon">🗑</span> Корзина</li>
         </ul>
@@ -563,6 +548,12 @@
                 <h3>Без времени / Многодневные</h3>
                 <ul class="task-list" id="no-time-tasks"></ul>
             </div>
+        </section>
+
+        <section id="view-completed" class="view">
+            <h1 class="view-title">Выполненные</h1>
+            <p class="view-subtitle">Завершенные задачи</p>
+            <ul class="task-list" id="completed-tasks"></ul>
         </section>
 
         <section id="view-calendar" class="view">
@@ -745,11 +736,13 @@
                 activeListFilter = null;
                 document.getElementById('today-title').textContent = 'Сегодня';
             }
-            if (viewName === 'calendar') document.querySelector('.sidebar-menu li:nth-child(2)').classList.add('active');
-            if (viewName === 'trash') document.querySelector('.sidebar-menu li:nth-child(3)').classList.add('active');
+            if (viewName === 'completed') document.querySelector('.sidebar-menu li:nth-child(2)').classList.add('active');
+            if (viewName === 'calendar') document.querySelector('.sidebar-menu li:nth-child(3)').classList.add('active');
+            if (viewName === 'trash') document.querySelector('.sidebar-menu li:nth-child(4)').classList.add('active');
             
             toggleSidebar(false);
             if (viewName === 'today') renderToday();
+            if (viewName === 'completed') renderCompleted();
             if (viewName === 'calendar') renderCalendar();
             if (viewName === 'trash') renderTrash();
         }
@@ -934,7 +927,7 @@
             renderFilters('today-filters');
             
             const todayStr = formatDate(today.getFullYear(), today.getMonth(), today.getDate());
-            let filtered = tasks.filter(t => t.date === todayStr);
+            let filtered = tasks.filter(t => t.date === todayStr && !t.completed);
             if (activeListFilter) {
                 filtered = filtered.filter(t => t.lists && t.lists.includes(activeListFilter));
             } else if (activeFilter !== 'Все') {
@@ -958,6 +951,21 @@
             renderTimeline(withTime);
             renderAllTasks(filtered);
             renderNoTimeTasks(withoutTime);
+        }
+
+        function renderCompleted() {
+            const completed = tasks.filter(t => t.completed);
+            completed.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+            
+            const listEl = document.getElementById('completed-tasks');
+            listEl.innerHTML = '';
+            
+            if (completed.length === 0) {
+                listEl.innerHTML = '<div class="empty-state">Нет выполненных задач</div>';
+                return;
+            }
+            
+            renderTaskListInto(listEl, completed, true);
         }
 
         function canShowOnTimeline(task) {
@@ -991,7 +999,6 @@
 
             hours.innerHTML = '';
             
-            // Находим min и max время среди задач
             let minMinutes = 24 * 60;
             let maxMinutes = 0;
             
@@ -1006,7 +1013,6 @@
                 maxMinutes = Math.max(maxMinutes, endMinutes);
             });
             
-            // Добавляем отступы по 30 минут
             const PADDING = 30;
             minMinutes = Math.max(0, minMinutes - PADDING);
             maxMinutes = Math.min(24 * 60, maxMinutes + PADDING);
@@ -1017,19 +1023,16 @@
             let TOTAL_SIZE;
             
             if (isMobile) {
-                // На мобильном подстраиваем масштаб под экран
-                const screenWidth = window.innerWidth - 40; // отступы
+                const screenWidth = window.innerWidth - 40;
                 PIXELS_PER_MINUTE = Math.max(0.5, screenWidth / rangeMinutes);
                 TOTAL_SIZE = rangeMinutes * PIXELS_PER_MINUTE;
             } else {
-                // На ПК фиксированный масштаб
                 PIXELS_PER_MINUTE = 1;
                 TOTAL_SIZE = 24 * 60 * PIXELS_PER_MINUTE;
             }
             
             hours.style.minWidth = `${TOTAL_SIZE}px`;
             
-            // Рисуем часовые метки
             for (let h = 0; h < 24; h++) {
                 const hourMinutes = h * 60;
                 if (hourMinutes < minMinutes || hourMinutes > maxMinutes) continue;
@@ -1049,7 +1052,15 @@
                 if (!task.time) return;
                 const [hrs, mins] = task.time.split(':').map(Number);
                 const startMinutes = hrs * 60 + mins;
-                const durationMinutes = calculateTotalMinutes(task);
+                let durationMinutes = calculateTotalMinutes(task);
+                
+                // Обрезаем длительность, если задача выходит за пределы дня
+                const remainingInDay = 24 * 60 - startMinutes;
+                let isTruncated = false;
+                if (durationMinutes > remainingInDay) {
+                    durationMinutes = remainingInDay;
+                    isTruncated = true;
+                }
                 
                 const taskDiv = document.createElement('div');
                 taskDiv.className = 'timeline-task' + (task.completed ? ' completed' : '');
@@ -1060,10 +1071,18 @@
                 taskDiv.style.background = getTaskBackground(task.lists);
                 taskDiv.onclick = () => openModal(task.id);
 
-                taskDiv.innerHTML = `
-                    <div class="timeline-task-name">${task.name}</div>
-                    <div class="timeline-task-time">${task.time} • ${formatTaskDuration(task)}</div>
-                `;
+                const durationText = formatTaskDuration(task);
+                if (isTruncated) {
+                    taskDiv.innerHTML = `
+                        <div class="timeline-task-name">${task.name}</div>
+                        <div class="timeline-task-time">${task.time} • ${durationText} → завтра</div>
+                    `;
+                } else {
+                    taskDiv.innerHTML = `
+                        <div class="timeline-task-name">${task.name}</div>
+                        <div class="timeline-task-time">${task.time} • ${durationText}</div>
+                    `;
+                }
                 hours.appendChild(taskDiv);
             });
         }
@@ -1246,7 +1265,7 @@
             renderTaskListInto(listEl, taskArray);
         }
 
-        function renderTaskListInto(listEl, taskArray) {
+        function renderTaskListInto(listEl, taskArray, showCompletedActions = false) {
             taskArray.forEach(task => {
                 const li = document.createElement('li');
                 li.className = 'task-item' + (task.completed ? ' completed' : '');
@@ -1263,15 +1282,29 @@
                 if (task.recurrence && task.recurrence !== 'none') meta.push(' ' + formatRecurrence(task.recurrence));
                 if (task.lists && task.lists.length > 0) meta.push(task.lists.join(', '));
 
+                let actionsHtml = '';
+                if (showCompletedActions) {
+                    actionsHtml = `
+                        <div class="task-actions">
+                            <button class="action-btn" onclick="event.stopPropagation(); toggleDone('${task.id}')" title="Вернуть в активные">↩</button>
+                            <button class="action-btn delete" onclick="event.stopPropagation(); deleteTask('${task.id}')" title="Удалить"></button>
+                        </div>
+                    `;
+                } else {
+                    actionsHtml = `
+                        <div class="task-actions">
+                            <button class="action-btn delete" onclick="event.stopPropagation(); deleteTask('${task.id}')" title="В корзину">✕</button>
+                        </div>
+                    `;
+                }
+
                 li.innerHTML = `
                     <div class="task-checkbox" onclick="event.stopPropagation(); toggleDone('${task.id}')"></div>
                     <div class="task-content">
                         <div class="task-name">${task.name}</div>
                         <div class="task-meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>
                     </div>
-                    <div class="task-actions">
-                        <button class="action-btn delete" onclick="event.stopPropagation(); deleteTask('${task.id}')"></button>
-                    </div>
+                    ${actionsHtml}
                 `;
                 listEl.appendChild(li);
             });
@@ -1294,7 +1327,7 @@
                     </div>
                     <div class="task-actions">
                         <button class="action-btn" onclick="restoreTask('${task.id}')" style="color:var(--accent)" title="Восстановить">↩</button>
-                        <button class="action-btn permanent-delete" onclick="event.stopPropagation(); permanentDeleteTask('${task.id}')" style="color:var(--danger)" title="Удалить навсегда">✕</button>
+                        <button class="action-btn permanent-delete" onclick="event.stopPropagation(); permanentDeleteTask('${task.id}')" style="color:var(--danger)" title="Удалить навсегда"></button>
                     </div>
                 `;
                 listEl.appendChild(li);
@@ -1395,7 +1428,16 @@
 
         function toggleDone(id) {
             const task = tasks.find(t => t.id === id);
-            if (task) { task.completed = !task.completed; saveData(); refreshAll(); }
+            if (task) { 
+                task.completed = !task.completed;
+                if (task.completed) {
+                    task.completedAt = new Date().toISOString();
+                } else {
+                    delete task.completedAt;
+                }
+                saveData(); 
+                refreshAll(); 
+            }
         }
 
         function deleteTask(id) {
@@ -1443,6 +1485,7 @@
         function refreshAll() {
             renderSidebarLists();
             if (document.getElementById('view-today').classList.contains('active')) renderToday();
+            if (document.getElementById('view-completed').classList.contains('active')) renderCompleted();
             if (document.getElementById('view-calendar').classList.contains('active')) renderCalendar();
             if (document.getElementById('view-trash').classList.contains('active')) renderTrash();
         }
