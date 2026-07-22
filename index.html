@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ===== LIGHT THEME (новый кремовый дизайн) ===== */
+/* ===== LIGHT THEME (тёплый кремовый) ===== */
 :root {
   --bg: #F2EFE9;
   --surface: #FAF9F6;
@@ -39,35 +39,32 @@
   --glow: none;
 }
 
-/* ===== DARK THEME (оригинальный дизайн v5.10) ===== */
+/* ===== DARK THEME (глубокий тёмно-синий + индиго) ===== */
 [data-theme="dark"] {
-  --bg: #1c1c1e;
-  --surface: #2c2c2e;
-  --surface-hover: #3a3a3c;
-  --sidebar-bg: #1c1c1e;
-  --text-primary: #f5f5f7;
-  --text-secondary: #98989d;
-  --text-tertiary: #6e6e73;
-  --border: #3a3a3c;
-  --border-light: #3a3a3c;
-  --accent: #0a84ff;
-  --accent-hover: #409cff;
-  --accent-light: rgba(10,132,255,0.15);
-  --accent-text: #FFFFFF;
-  --danger: #ff453a;
-  --danger-light: rgba(255,69,58,0.15);
-  --success: #30d158;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
-  --shadow-warm: 0 2px 8px rgba(0,0,0,0.4);
-  --header-bg: rgba(28,28,30,0.8);
-  --overlay: rgba(0,0,0,0.4);
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --icon-color: #98989d;
-  --glow: none;
+  --bg: #0C0C12;
+  --surface: #16161F;
+  --surface-hover: #1E1E2A;
+  --sidebar-bg: #0F0F18;
+  --text-primary: #F1F1F6;
+  --text-secondary: #8B8FA3;
+  --text-tertiary: #555770;
+  --border: #252536;
+  --border-light: #1E1E2C;
+  --accent: #818CF8;
+  --accent-hover: #6366F1;
+  --accent-light: rgba(129,140,248,0.10);
+  --accent-text: #0C0C12;
+  --danger: #F87171;
+  --danger-light: rgba(248,113,113,0.10);
+  --success: #34D399;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.30);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.40);
+  --shadow-warm: 0 8px 30px rgba(0,0,0,0.40);
+  --header-bg: rgba(12,12,18,0.78);
+  --overlay: rgba(0,0,0,0.55);
+  --icon-color: #8B8FA3;
+  --glow: 0 0 12px rgba(129,140,248,0.30);
 }
 
 /* ===== RESET & BASE ===== */
@@ -352,7 +349,7 @@ body {
 .timeline-hour {
   position: absolute;
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   font-weight: 500;
   width: 60px;
   text-align: center;
@@ -434,6 +431,7 @@ body {
 .task-item.completed .task-checkbox {
   background: var(--accent);
   border-color: var(--accent);
+  box-shadow: var(--glow);
 }
 .task-item.completed .task-checkbox::after {
   content: '';
@@ -462,6 +460,9 @@ body {
 .task-item.completed .task-name {
   text-decoration: line-through;
   color: var(--text-tertiary);
+}
+.task-item.completed {
+  box-shadow: var(--glow);
 }
 .task-actions { display: flex; gap: 4px; }
 .action-btn {
@@ -821,16 +822,12 @@ body {
 
 <!-- ===== MAIN CONTENT ===== -->
 <main class="content">
-
-  <!-- TODAY -->
   <section id="view-today" class="view active">
     <h1 class="view-title" id="today-title">Сегодня</h1>
     <p class="view-subtitle" id="today-subtitle"></p>
     <div class="filters" id="today-filters"></div>
     <div class="timeline-wrapper">
-      <div class="timeline">
-        <div class="timeline-hours" id="timeline-hours"></div>
-      </div>
+      <div class="timeline"><div class="timeline-hours" id="timeline-hours"></div></div>
     </div>
     <div class="all-tasks-section">
       <h3>Все задачи на сегодня</h3>
@@ -841,15 +838,11 @@ body {
       <ul class="task-list" id="no-time-tasks"></ul>
     </div>
   </section>
-
-  <!-- COMPLETED -->
   <section id="view-completed" class="view">
     <h1 class="view-title">Выполненные</h1>
     <p class="view-subtitle">Завершённые задачи</p>
     <ul class="task-list" id="completed-tasks"></ul>
   </section>
-
-  <!-- CALENDAR -->
   <section id="view-calendar" class="view">
     <h1 class="view-title">Календарь</h1>
     <div class="cal-nav">
@@ -869,8 +862,6 @@ body {
     <h2 style="font-size:16px; font-weight:600; margin:20px 0 12px; letter-spacing:-0.2px;" id="cal-day-title">Задачи на день</h2>
     <ul class="task-list" id="cal-tasks"></ul>
   </section>
-
-  <!-- TRASH -->
   <section id="view-trash" class="view">
     <h1 class="view-title">Корзина</h1>
     <p class="view-subtitle">Удалённые задачи</p>
@@ -883,19 +874,10 @@ body {
   <div class="modal">
     <h3 id="modal-title">Новая задача</h3>
     <input type="hidden" id="task-id">
-    <div class="form-group">
-      <label>Название</label>
-      <input type="text" id="task-name" placeholder="Что нужно сделать?">
-    </div>
+    <div class="form-group"><label>Название</label><input type="text" id="task-name" placeholder="Что нужно сделать?"></div>
     <div class="form-row">
-      <div class="form-group">
-        <label>Дата</label>
-        <input type="date" id="task-date">
-      </div>
-      <div class="form-group">
-        <label>Время</label>
-        <input type="time" id="task-time">
-      </div>
+      <div class="form-group"><label>Дата</label><input type="date" id="task-date"></div>
+      <div class="form-group"><label>Время</label><input type="time" id="task-time"></div>
     </div>
     <div class="form-group">
       <label>Длительность</label>
@@ -927,14 +909,8 @@ body {
         <option value="yearly">Ежегодно</option>
       </select>
     </div>
-    <div class="form-group">
-      <label>Списки</label>
-      <div class="checkbox-group" id="task-lists-checkboxes"></div>
-    </div>
-    <div class="form-group">
-      <label>Заметка</label>
-      <textarea id="task-note" placeholder="Подробности..."></textarea>
-    </div>
+    <div class="form-group"><label>Списки</label><div class="checkbox-group" id="task-lists-checkboxes"></div></div>
+    <div class="form-group"><label>Заметка</label><textarea id="task-note" placeholder="Подробности..."></textarea></div>
     <div class="modal-buttons">
       <button class="btn-cancel" onclick="closeModal()">Отмена</button>
       <button class="btn-save" onclick="saveTask()">Сохранить</button>
@@ -947,14 +923,8 @@ body {
   <div class="modal">
     <h3 id="list-modal-title">Новый список</h3>
     <input type="hidden" id="list-edit-index">
-    <div class="form-group">
-      <label>Название</label>
-      <input type="text" id="list-name" placeholder="Название списка">
-    </div>
-    <div class="form-group">
-      <label>Цвет</label>
-      <div class="color-picker" id="color-picker"></div>
-    </div>
+    <div class="form-group"><label>Название</label><input type="text" id="list-name" placeholder="Название списка"></div>
+    <div class="form-group"><label>Цвет</label><div class="color-picker" id="color-picker"></div></div>
     <div class="modal-buttons">
       <button class="btn-cancel" onclick="closeListModal()">Отмена</button>
       <button class="btn-save" onclick="saveList()">Сохранить</button>
@@ -963,7 +933,6 @@ body {
 </div>
 
 <script>
-/* ===== SVG ICON TEMPLATES ===== */
 const ICO = {
   edit: '<span class="icon icon-sm"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>',
   close: '<span class="icon icon-sm"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>',
@@ -971,12 +940,11 @@ const ICO = {
   trash: '<span class="icon icon-sm"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>',
 };
 
-/* ===== THEME-AWARE LIST COLORS ===== */
 function getListColors() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   return isDark
-    ? ['#0a84ff', '#30d158', '#ff9f0a', '#ff453a', '#bf5af2', '#ff375f', '#64d2ff', '#ffd60a']
-    : ['#6B8DD6', '#5BB8A8', '#7BC47F', '#F0A050', '#E8705A', '#B07FD6', '#D67090', '#D6B050'];
+    ? ['#7B8FE0','#4DA8A0','#6BC47F','#E89050','#D86050','#A07FE0','#D06080','#D6B040']
+    : ['#6B8DD6','#5BB8A8','#7BC47F','#F0A050','#E8705A','#B07FD6','#D67090','#D6B050'];
 }
 const COLORS = getListColors();
 
@@ -990,7 +958,6 @@ let activeListFilter = null;
 let durationMode = 'simple';
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-/* ===== THEME ===== */
 function initTheme() {
   const saved = localStorage.getItem('diary-theme') || 'light';
   document.documentElement.setAttribute('data-theme', saved);
@@ -1016,13 +983,10 @@ function updateThemeButton(theme) {
 }
 function updateListColorsForTheme() {
   const newColors = getListColors();
-  lists.forEach((list, i) => {
-    if (newColors[i]) list.color = newColors[i];
-  });
+  lists.forEach((list, i) => { if (newColors[i]) list.color = newColors[i]; });
   saveData();
 }
 
-/* ===== DURATION MODE ===== */
 function setDurationMode(mode) {
   durationMode = mode;
   document.getElementById('btn-duration').classList.toggle('active', mode === 'simple');
@@ -1031,7 +995,6 @@ function setDurationMode(mode) {
   document.getElementById('datetime-duration').style.display = mode === 'datetime' ? 'block' : 'none';
 }
 
-/* ===== VIEWS ===== */
 function showView(viewName) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(`view-${viewName}`).classList.add('active');
@@ -1051,7 +1014,6 @@ function showView(viewName) {
   if (viewName === 'trash') renderTrash();
 }
 
-/* ===== SIDEBAR ===== */
 function toggleSidebar(forceState) {
   const sb = document.getElementById('sidebar');
   const ov = document.getElementById('sidebar-overlay');
@@ -1069,7 +1031,7 @@ function renderSidebarLists() {
     div.className = 'list-item' + (activeListFilter === list.name ? ' active' : '');
     div.innerHTML = `
       <span style="display:flex;align-items:center;gap:8px;">
-        <span style="width:10px;height:10px;border-radius:50%;background:${list.color};flex-shrink:0;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:${list.color};flex-shrink:0;box-shadow:0 0 6px ${list.color}40;"></span>
         ${list.name}
       </span>
       <span style="display:flex;align-items:center;gap:6px;">
@@ -1095,7 +1057,6 @@ function renderSidebarLists() {
   });
 }
 
-/* ===== LIST MODAL ===== */
 function openListModal(index = null) {
   document.getElementById('list-modal').classList.add('active');
   const colorPicker = document.getElementById('color-picker');
@@ -1164,7 +1125,6 @@ function rgbToHex(rgb) {
   return '#' + result.slice(0, 3).map(x => { const hex = parseInt(x).toString(16); return hex.length === 1 ? '0' + hex : hex; }).join('');
 }
 
-/* ===== LISTS CHECKBOXES ===== */
 function updateListsCheckboxes() {
   const cont = document.getElementById('task-lists-checkboxes');
   cont.innerHTML = '';
@@ -1184,7 +1144,6 @@ function getTaskBackground(listsArr) {
   return `linear-gradient(180deg, ${colors.map((c, i) => `${c} ${i*h}% ${(i+1)*h}%`).join(', ')})`;
 }
 
-/* ===== RENDER TODAY ===== */
 function renderToday() {
   const today = new Date();
   document.getElementById('today-subtitle').textContent = today.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -1202,7 +1161,6 @@ function renderToday() {
   renderNoTimeTasks(withoutTime);
 }
 
-/* ===== RENDER COMPLETED ===== */
 function renderCompleted() {
   const completed = tasks.filter(t => t.completed);
   completed.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
@@ -1212,7 +1170,6 @@ function renderCompleted() {
   renderTaskListInto(listEl, completed, true);
 }
 
-/* ===== TIMELINE ===== */
 function canShowOnTimeline(task) {
   if (!task.durationMode && (!task.durationValue || !task.durationUnit)) return true;
   return calculateTotalMinutes(task) <= 24 * 60;
@@ -1315,7 +1272,6 @@ function formatTaskDuration(task) {
   return p.join(' ') || '0 мин';
 }
 
-/* ===== TASK LISTS ===== */
 function renderAllTasks(arr) {
   const el = document.getElementById('all-tasks-list');
   el.innerHTML = '';
@@ -1352,7 +1308,6 @@ function renderTaskListInto(listEl, arr, showCompleted = false) {
   });
 }
 
-/* ===== CALENDAR ===== */
 function renderCalendar() {
   const y = calDate.getFullYear(), m = calDate.getMonth();
   document.getElementById('cal-title').textContent = `${MONTHS[m]} ${y}`;
@@ -1395,7 +1350,6 @@ function renderCalTasks() {
 function changeMonth(d) { calDate.setMonth(calDate.getMonth() + d); renderCalendar(); }
 function changeYear(d) { calDate.setFullYear(calDate.getFullYear() + d); renderCalendar(); }
 
-/* ===== FILTERS ===== */
 function renderFilters(id) {
   const c = document.getElementById(id); c.innerHTML = '';
   ['Все', ...lists.map(l => l.name)].forEach(l => {
@@ -1408,7 +1362,6 @@ function renderFilters(id) {
 }
 function formatRecurrence(r) { return { daily:'Ежедневно', weekly:'Еженедельно', monthly:'Ежемесячно', yearly:'Ежегодно' }[r] || ''; }
 
-/* ===== TRASH ===== */
 function renderTrash() {
   const el = document.getElementById('trash-tasks'); el.innerHTML = '';
   if (!trash.length) { el.innerHTML = '<div class="empty-state">Корзина пуста</div>'; return; }
@@ -1420,7 +1373,6 @@ function renderTrash() {
   });
 }
 
-/* ===== TASK MODAL ===== */
 function openModal(taskId = null) {
   document.getElementById('modal').classList.add('active');
   updateListsCheckboxes(); setDurationMode('simple');
@@ -1470,7 +1422,6 @@ function saveTask() {
   saveData(); closeModal(); refreshAll();
 }
 
-/* ===== TASK ACTIONS ===== */
 function toggleDone(id) {
   const t = tasks.find(t => t.id === id);
   if (t) { t.completed = !t.completed; if (t.completed) t.completedAt = new Date().toISOString(); else delete t.completedAt; saveData(); refreshAll(); }
@@ -1489,7 +1440,6 @@ function restoreTask(id) {
   if (i > -1) { const r = trash.splice(i, 1)[0]; delete r.deletedAt; tasks.push(r); saveData(); refreshAll(); }
 }
 
-/* ===== UTILS ===== */
 function formatDate(y, m, d) { return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
 function saveData() {
   localStorage.setItem('diary-tasks', JSON.stringify(tasks));
@@ -1504,7 +1454,6 @@ function refreshAll() {
   if (document.getElementById('view-trash').classList.contains('active')) renderTrash();
 }
 
-/* ===== INIT ===== */
 initTheme();
 renderSidebarLists();
 updateListsCheckboxes();
