@@ -699,7 +699,7 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B8FA3' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16 14'/%3E%3C/svg%3E");
 }
 
-/* ===== CHECKBOX LIST ITEMS ===== */
+/* ===== CHECKBOX LIST ITEMS (в модалке задачи) ===== */
 .checkbox-group {
   display: flex;
   flex-direction: column;
@@ -729,6 +729,7 @@ body {
   border-color: var(--accent);
   background: var(--accent-light);
 }
+/* Скрываем нативный чекбокс */
 .checkbox-item input[type="checkbox"] {
   position: absolute;
   opacity: 0;
@@ -736,6 +737,7 @@ body {
   height: 0;
   pointer-events: none;
 }
+/* Кастомный кружок-чекбокс */
 .checkbox-item .check-circle {
   width: 20px;
   height: 20px;
@@ -769,6 +771,7 @@ body {
   opacity: 1;
   transform: scale(1);
 }
+/* Цветной индикатор списка */
 .checkbox-item .list-color-dot {
   width: 12px;
   height: 12px;
@@ -780,6 +783,7 @@ body {
 .checkbox-item.checked .list-color-dot {
   box-shadow: 0 0 0 2px var(--accent-light);
 }
+/* Название списка */
 .checkbox-item .list-name {
   font-size: 14px;
   font-weight: 500;
@@ -894,6 +898,7 @@ body {
 </head>
 <body>
 
+<!-- ===== HEADER ===== -->
 <header class="header">
   <button class="icon-btn" onclick="toggleSidebar()" aria-label="Меню">
     <span class="icon"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span>
@@ -909,6 +914,7 @@ body {
   </div>
 </header>
 
+<!-- ===== SIDEBAR ===== -->
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-header">Навигация</div>
@@ -939,6 +945,7 @@ body {
   <div id="sidebar-lists"></div>
 </nav>
 
+<!-- ===== MAIN CONTENT ===== -->
 <main class="content">
   <section id="view-today" class="view active">
     <h1 class="view-title" id="today-title">Сегодня</h1>
@@ -987,6 +994,7 @@ body {
   </section>
 </main>
 
+<!-- ===== TASK MODAL ===== -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <h3 id="modal-title">Новая задача</h3>
@@ -1035,6 +1043,7 @@ body {
   </div>
 </div>
 
+<!-- ===== LIST MODAL ===== -->
 <div class="modal-overlay" id="list-modal">
   <div class="modal">
     <h3 id="list-modal-title">Новый список</h3>
@@ -1056,63 +1065,17 @@ const ICO = {
   trash: '<span class="icon icon-sm"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>',
 };
 
-/* ===== ДЕФОЛТНЫЕ ЦВЕТА ПО ИНДЕКСАМ ===== */
-const DEFAULT_LIGHT_COLORS = ['#6B8DD6','#5BB8A8','#7BC47F','#F0A050','#E8705A','#B07FD6','#D67090','#D6B050'];
-const DEFAULT_DARK_COLORS  = ['#7B8FE0','#4DA8A0','#6BC47F','#E89050','#D86050','#A07FE0','#D06080','#D6B040'];
-
-/* ===== ХРАНИЛИЩЕ ЦВЕТОВ СПИСКОВ ПО ТЕМАМ ===== */
-/* Формат: { "Название": { light: "#...", dark: "#..." } } */
-let listColors = {};
-
-function loadListColors() {
-  try {
-    listColors = JSON.parse(localStorage.getItem('diary-list-colors') || '{}');
-  } catch(e) { listColors = {}; }
+function getListColors() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return isDark
+    ? ['#7B8FE0','#4DA8A0','#6BC47F','#E89050','#D86050','#A07FE0','#D06080','#D6B040']
+    : ['#6B8DD6','#5BB8A8','#7BC47F','#F0A050','#E8705A','#B07FD6','#D67090','#D6B050'];
 }
-function saveListColors() {
-  localStorage.setItem('diary-list-colors', JSON.stringify(listColors));
-}
+const COLORS = getListColors();
 
-/* Получить цвет списка для заданной темы. Если пользователь не выбирал — берём дефолт по индексу. */
-function getListColorForTheme(listName, theme, fallbackIndex) {
-  const entry = listColors[listName];
-  if (entry && entry[theme]) return entry[theme];
-  const defaults = theme === 'dark' ? DEFAULT_DARK_COLORS : DEFAULT_LIGHT_COLORS;
-  return defaults[fallbackIndex] || defaults[0];
-}
-
-/* Установить цвет списка для текущей темы. */
-function setListColorForTheme(listName, theme, color) {
-  if (!listColors[listName]) listColors[listName] = {};
-  listColors[listName][theme] = color;
-  saveListColors();
-}
-
-/* Удалить запись о цветах списка (при удалении списка). */
-function deleteListColorRecord(listName) {
-  if (listColors[listName]) {
-    delete listColors[listName];
-    saveListColors();
-  }
-}
-
-/* Получить массив цветов для всех списков в заданной теме (для пикера и инициализации). */
-function getListColorsForTheme(theme) {
-  return lists.map((list, i) => getListColorForTheme(list.name, theme, i));
-}
-
-/* Применить цвета текущей темы ко всем спискам (обновить list.color). */
-function applyThemeColorsToLists() {
-  const theme = document.documentElement.getAttribute('data-theme') || 'light';
-  lists.forEach((list, i) => {
-    list.color = getListColorForTheme(list.name, theme, i);
-  });
-}
-
-/* ===== ДАННЫЕ ===== */
 let tasks = JSON.parse(localStorage.getItem('diary-tasks') || '[]');
 let trash = JSON.parse(localStorage.getItem('diary-trash') || '[]');
-let lists = JSON.parse(localStorage.getItem('diary-lists') || '[{"name":"Личное"},{"name":"Работа"},{"name":"Учёба"},{"name":"Здоровье"}]');
+let lists = JSON.parse(localStorage.getItem('diary-lists') || '[{"name":"Личное","color":"#6B8DD6"},{"name":"Работа","color":"#5BB8A8"},{"name":"Учёба","color":"#F0A050"},{"name":"Здоровье","color":"#E8705A"}]');
 let calDate = new Date();
 let selectedCalDate = new Date();
 let activeFilter = 'Все';
@@ -1120,27 +1083,21 @@ let activeListFilter = null;
 let durationMode = 'simple';
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-/* ===== THEME ===== */
 function initTheme() {
   const saved = localStorage.getItem('diary-theme') || 'light';
   document.documentElement.setAttribute('data-theme', saved);
   updateThemeButton(saved);
-  loadListColors();
-  applyThemeColorsToLists();
+  updateListColorsForTheme();
 }
-
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
   const newTheme = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', newTheme);
   localStorage.setItem('diary-theme', newTheme);
   updateThemeButton(newTheme);
-  /* Переключаем цвета списков на цвета новой темы (сохранённые или дефолтные) */
-  applyThemeColorsToLists();
-  saveData();
+  updateListColorsForTheme();
   refreshAll();
 }
-
 function updateThemeButton(theme) {
   const iconEl = document.getElementById('theme-icon');
   if (theme === 'dark') {
@@ -1148,6 +1105,11 @@ function updateThemeButton(theme) {
   } else {
     iconEl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
   }
+}
+function updateListColorsForTheme() {
+  const newColors = getListColors();
+  lists.forEach((list, i) => { if (newColors[i]) list.color = newColors[i]; });
+  saveData();
 }
 
 function setDurationMode(mode) {
@@ -1194,7 +1156,7 @@ function renderSidebarLists() {
     div.className = 'list-item' + (activeListFilter === list.name ? ' active' : '');
     div.innerHTML = `
       <span style="display:flex;align-items:center;gap:8px;">
-        <span style="width:10px;height:10px;border-radius:50%;background:${list.color};flex-shrink:0;box-shadow:0 0 6px ${list.color}40;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:${list.color};flex-shrink:0;"></span>
         ${list.name}
       </span>
       <span style="display:flex;align-items:center;gap:6px;">
@@ -1220,13 +1182,11 @@ function renderSidebarLists() {
   });
 }
 
-/* ===== LIST MODAL ===== */
 function openListModal(index = null) {
   document.getElementById('list-modal').classList.add('active');
   const colorPicker = document.getElementById('color-picker');
   colorPicker.innerHTML = '';
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-  const currentColors = getListColorsForTheme(currentTheme);
+  const currentColors = getListColors();
   currentColors.forEach(color => {
     const div = document.createElement('div');
     div.className = 'color-option';
@@ -1244,7 +1204,6 @@ function openListModal(index = null) {
     document.getElementById('list-name').value = list.name;
     const colorOption = Array.from(colorPicker.children).find(c => rgbToHex(c.style.background) === list.color);
     if (colorOption) colorOption.classList.add('selected');
-    else colorPicker.children[0].classList.add('selected');
   } else {
     document.getElementById('list-modal-title').textContent = 'Новый список';
     document.getElementById('list-edit-index').value = '';
@@ -1253,7 +1212,6 @@ function openListModal(index = null) {
   }
 }
 function closeListModal() { document.getElementById('list-modal').classList.remove('active'); }
-
 function saveList() {
   const name = document.getElementById('list-name').value.trim();
   if (!name) return alert('Введите название');
@@ -1261,35 +1219,17 @@ function saveList() {
   if (!selectedColor) return alert('Выберите цвет');
   const color = rgbToHex(selectedColor.style.background);
   const editIndex = document.getElementById('list-edit-index').value;
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-
   if (editIndex !== '') {
     const oldName = lists[editIndex].name;
-    /* Если имя изменилось — переносим запись о цветах */
-    if (oldName !== name) {
-      if (listColors[oldName]) {
-        listColors[name] = listColors[oldName];
-        delete listColors[oldName];
-      }
-      tasks.forEach(t => { if (t.lists && t.lists.includes(oldName)) t.lists = t.lists.map(l => l === oldName ? name : l); });
-    }
     lists[editIndex].name = name;
     lists[editIndex].color = color;
-    /* Сохраняем цвет только для текущей темы */
-    setListColorForTheme(name, currentTheme, color);
+    tasks.forEach(t => { if (t.lists && t.lists.includes(oldName)) t.lists = t.lists.map(l => l === oldName ? name : l); });
   } else {
     if (lists.some(l => l.name === name)) return alert('Список с таким названием уже существует');
     lists.push({ name, color });
-    /* Сохраняем цвет для текущей темы; для другой темы оставим дефолт */
-    setListColorForTheme(name, currentTheme, color);
   }
-  saveData();
-  closeListModal();
-  renderSidebarLists();
-  updateListsCheckboxes();
-  refreshAll();
+  saveData(); closeListModal(); renderSidebarLists(); updateListsCheckboxes(); refreshAll();
 }
-
 function deleteList(index) {
   const list = lists[index];
   const hasTasks = tasks.some(t => t.lists && t.lists.includes(list.name));
@@ -1299,16 +1239,10 @@ function deleteList(index) {
   } else {
     if (!confirm(`Удалить список «${list.name}»?`)) return;
   }
-  /* Удаляем запись о цветах для обеих тем */
-  deleteListColorRecord(list.name);
   lists.splice(index, 1);
   if (activeListFilter === list.name) activeListFilter = null;
-  saveData();
-  renderSidebarLists();
-  updateListsCheckboxes();
-  refreshAll();
+  saveData(); renderSidebarLists(); updateListsCheckboxes(); refreshAll();
 }
-
 function rgbToHex(rgb) {
   if (!rgb || rgb.startsWith('#')) return rgb;
   const result = rgb.match(/\d+/g);
@@ -1316,7 +1250,7 @@ function rgbToHex(rgb) {
   return '#' + result.slice(0, 3).map(x => { const hex = parseInt(x).toString(16); return hex.length === 1 ? '0' + hex : hex; }).join('');
 }
 
-/* ===== CHECKBOXES ===== */
+/* ===== ПЕРЕРАБОТАННЫЕ ЧЕКБОКСЫ СПИСКОВ ===== */
 function updateListsCheckboxes() {
   const cont = document.getElementById('task-lists-checkboxes');
   cont.innerHTML = '';
@@ -1335,7 +1269,9 @@ function updateListsCheckboxes() {
       <span class="list-color-dot" style="background:${list.color};"></span>
       <span class="list-name">${list.name}</span>
     `;
-    label.addEventListener('click', () => {
+    // Обработчик клика для визуального состояния
+    label.addEventListener('click', (e) => {
+      // Небольшая задержка, чтобы checkbox успел переключиться
       setTimeout(() => {
         const cb = label.querySelector('input[type="checkbox"]');
         label.classList.toggle('checked', cb.checked);
@@ -1345,10 +1281,7 @@ function updateListsCheckboxes() {
   });
 }
 
-function getListColor(listName) {
-  const list = lists.find(l => l.name === listName);
-  return list?.color || '#6B8DD6';
-}
+function getListColor(listName) { const list = lists.find(l => l.name === listName); return list?.color || '#6B8DD6'; }
 function getTaskBackground(listsArr) {
   if (!listsArr || listsArr.length === 0) return '#6B8DD6';
   if (listsArr.length === 1) return getListColor(listsArr[0]);
@@ -1609,7 +1542,10 @@ function openModal(taskId = null) {
     if (t.lists) {
       t.lists.forEach(ln => {
         const cb = document.querySelector(`#task-lists-checkboxes input[value="${ln}"]`);
-        if (cb) { cb.checked = true; cb.closest('.checkbox-item').classList.add('checked'); }
+        if (cb) {
+          cb.checked = true;
+          cb.closest('.checkbox-item').classList.add('checked');
+        }
       });
     }
   } else {
