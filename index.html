@@ -186,6 +186,7 @@ body {
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 1px;
+  text-align: center;
 }
 .sidebar-menu { list-style: none; padding: 0 10px; }
 .sidebar-menu li {
@@ -729,7 +730,6 @@ body {
   border-color: var(--accent);
   background: var(--accent-light);
 }
-/* Скрываем нативный чекбокс */
 .checkbox-item input[type="checkbox"] {
   position: absolute;
   opacity: 0;
@@ -737,7 +737,6 @@ body {
   height: 0;
   pointer-events: none;
 }
-/* Кастомный кружок-чекбокс */
 .checkbox-item .check-circle {
   width: 20px;
   height: 20px;
@@ -771,19 +770,19 @@ body {
   opacity: 1;
   transform: scale(1);
 }
-/* Цветной индикатор списка */
 .checkbox-item .list-color-dot {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px var(--surface);
-  transition: box-shadow 0.2s;
+  border: 2px solid rgba(255,255,255,0.3);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: all 0.2s;
 }
 .checkbox-item.checked .list-color-dot {
-  box-shadow: 0 0 0 2px var(--accent-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light), 0 1px 3px rgba(0,0,0,0.2);
 }
-/* Название списка */
 .checkbox-item .list-name {
   font-size: 14px;
   font-weight: 500;
@@ -900,8 +899,8 @@ body {
 
 <!-- ===== HEADER ===== -->
 <header class="header">
-  <button class="icon-btn" onclick="toggleSidebar()" aria-label="Меню">
-    <span class="icon"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span>
+  <button class="icon-btn" onclick="toggleSidebar()" id="menu-btn" aria-label="Меню">
+    <span class="icon" id="menu-icon"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span>
   </button>
   <div class="header-title">Ежедневник</div>
   <div class="header-actions">
@@ -961,6 +960,15 @@ body {
     <div class="no-time-section" id="no-time-section" style="display:none;">
       <h3>Без времени / Многодневные</h3>
       <ul class="task-list" id="no-time-tasks"></ul>
+    </div>
+  </section>
+  <section id="view-list" class="view">
+    <h1 class="view-title" id="list-title">Список</h1>
+    <p class="view-subtitle" id="list-subtitle"></p>
+    <div class="filters" id="list-filters"></div>
+    <div class="all-tasks-section">
+      <h3>Все задачи списка</h3>
+      <ul class="task-list" id="list-tasks"></ul>
     </div>
   </section>
   <section id="view-completed" class="view">
@@ -1134,6 +1142,7 @@ function showView(viewName) {
   if (viewName === 'trash') document.querySelector('.sidebar-menu li:nth-child(4)').classList.add('active');
   toggleSidebar(false);
   if (viewName === 'today') renderToday();
+  if (viewName === 'list') renderListView();
   if (viewName === 'completed') renderCompleted();
   if (viewName === 'calendar') renderCalendar();
   if (viewName === 'trash') renderTrash();
@@ -1145,6 +1154,16 @@ function toggleSidebar(forceState) {
   const isActive = typeof forceState === 'boolean' ? forceState : !sb.classList.contains('active');
   sb.classList.toggle('active', isActive);
   ov.classList.toggle('active', isActive);
+  updateMenuIcon(isActive);
+}
+
+function updateMenuIcon(isOpen) {
+  const iconEl = document.getElementById('menu-icon');
+  if (isOpen) {
+    iconEl.innerHTML = '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  } else {
+    iconEl.innerHTML = '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+  }
 }
 
 function renderSidebarLists() {
@@ -1169,17 +1188,38 @@ function renderSidebarLists() {
     `;
     div.onclick = () => {
       activeListFilter = list.name;
-      document.getElementById('today-title').textContent = list.name;
+      document.getElementById('list-title').textContent = list.name;
+      document.getElementById('list-subtitle').textContent = `Задачи списка "${list.name}"`;
       document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
       document.querySelectorAll('.list-item').forEach(li => li.classList.remove('active'));
       div.classList.add('active');
       toggleSidebar(false);
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.getElementById('view-today').classList.add('active');
-      renderToday();
+      document.getElementById('view-list').classList.add('active');
+      renderListView();
     };
     cont.appendChild(div);
   });
+}
+
+function renderListView() {
+  if (!activeListFilter) {
+    showView('today');
+    return;
+  }
+  renderFilters('list-filters');
+  let filtered = tasks.filter(t => t.lists && t.lists.includes(activeListFilter));
+  filtered.sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || '');
+  });
+  const listEl = document.getElementById('list-tasks');
+  listEl.innerHTML = '';
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div class="empty-state">Нет задач в этом списке</div>';
+    return;
+  }
+  renderTaskListInto(listEl, filtered, true);
 }
 
 function openListModal(index = null) {
@@ -1224,6 +1264,7 @@ function saveList() {
     lists[editIndex].name = name;
     lists[editIndex].color = color;
     tasks.forEach(t => { if (t.lists && t.lists.includes(oldName)) t.lists = t.lists.map(l => l === oldName ? name : l); });
+    if (activeListFilter === oldName) activeListFilter = name;
   } else {
     if (lists.some(l => l.name === name)) return alert('Список с таким названием уже существует');
     lists.push({ name, color });
@@ -1240,7 +1281,10 @@ function deleteList(index) {
     if (!confirm(`Удалить список «${list.name}»?`)) return;
   }
   lists.splice(index, 1);
-  if (activeListFilter === list.name) activeListFilter = null;
+  if (activeListFilter === list.name) {
+    activeListFilter = null;
+    showView('today');
+  }
   saveData(); renderSidebarLists(); updateListsCheckboxes(); refreshAll();
 }
 function rgbToHex(rgb) {
@@ -1250,7 +1294,6 @@ function rgbToHex(rgb) {
   return '#' + result.slice(0, 3).map(x => { const hex = parseInt(x).toString(16); return hex.length === 1 ? '0' + hex : hex; }).join('');
 }
 
-/* ===== ПЕРЕРАБОТАННЫЕ ЧЕКБОКСЫ СПИСКОВ ===== */
 function updateListsCheckboxes() {
   const cont = document.getElementById('task-lists-checkboxes');
   cont.innerHTML = '';
@@ -1269,9 +1312,7 @@ function updateListsCheckboxes() {
       <span class="list-color-dot" style="background:${list.color};"></span>
       <span class="list-name">${list.name}</span>
     `;
-    // Обработчик клика для визуального состояния
     label.addEventListener('click', (e) => {
-      // Небольшая задержка, чтобы checkbox успел переключиться
       setTimeout(() => {
         const cb = label.querySelector('input[type="checkbox"]');
         label.classList.toggle('checked', cb.checked);
@@ -1603,6 +1644,7 @@ function saveData() {
 function refreshAll() {
   renderSidebarLists();
   if (document.getElementById('view-today').classList.contains('active')) renderToday();
+  if (document.getElementById('view-list').classList.contains('active')) renderListView();
   if (document.getElementById('view-completed').classList.contains('active')) renderCompleted();
   if (document.getElementById('view-calendar').classList.contains('active')) renderCalendar();
   if (document.getElementById('view-trash').classList.contains('active')) renderTrash();
