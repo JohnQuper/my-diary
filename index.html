@@ -1174,7 +1174,7 @@ if (!activeListFilter) {
 showView('today');
 return;
 }
-renderFilters('list-filters');
+// renderFilters('list-filters'); // Убрано - фильтры не нужны в меню списков
 let filtered = tasks.filter(t => t.lists && t.lists.includes(activeListFilter));
 filtered.sort((a, b) => {
 if (a.completed !== b.completed) return a.completed ? 1 : -1;
