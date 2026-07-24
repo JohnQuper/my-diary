@@ -1128,7 +1128,6 @@ updateMenuIcon(isActive);
 }
 function updateMenuIcon(isOpen) {
 const iconEl = document.getElementById('menu-icon');
-// Всегда показываем 3 полосы (гамбургер-меню)
 iconEl.innerHTML = '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
 }
 function renderSidebarLists() {
@@ -1171,7 +1170,6 @@ if (!activeListFilter) {
 showView('today');
 return;
 }
-// renderFilters('list-filters'); // Убрано - фильтры не нужны в меню списков
 let filtered = tasks.filter(t => t.lists && t.lists.includes(activeListFilter));
 filtered.sort((a, b) => {
 if (a.completed !== b.completed) return a.completed ? 1 : -1;
@@ -1327,118 +1325,117 @@ return Math.max(0, (end - start) / 60000);
 }
 return (parseInt(task.durationDays)||0)*1440 + (parseInt(task.durationHours)||0)*60 + (parseInt(task.durationMinutes)||0);
 }
-
 function renderTimeline(taskArray) {
-    const hours = document.getElementById('timeline-hours');
-    const isMobile = window.innerWidth < 768;
-    
-    hours.innerHTML = '';
-    hours.style.width = '100%';
-    hours.style.minWidth = '100%';
-    
-    // Определяем шаг для вертикальных линий по размерам окна
-    let step = 1;
-    if (isMobile) {
-        step = 3;
-    } else {
-        const containerWidth = hours.clientWidth;
-        if (containerWidth < 600) step = 3;
-        else if (containerWidth < 1000) step = 2;
-        else step = 1;
-    }
-    
-    // Рисуем вертикальные линии и подписи часов от 00:00 до 23:59
-    for (let h = 0; h < 24; h += step) {
-        const hm = h * 60;
-        const percent = (hm / 1440) * 100;
-        
-        // Вертикальная прерывистая линия (полупрозрачная, поверх задач)
-        const line = document.createElement('div');
-        line.style.cssText = `
-            position: absolute;
-            left: ${percent}%;
-            top: 0;
-            bottom: 0;
-            width: 0;
-            border-left: 1px dashed rgba(128, 128, 128, 0.3);
-            z-index: 15;
-            pointer-events: none;
-        `;
-        hours.appendChild(line);
-        
-        // Подпись часа
-        const label = document.createElement('div');
-        label.className = 'timeline-hour';
-        label.style.left = `${percent}%`;
-        label.style.transform = 'translateX(-50%)';
-        label.style.top = '0';
-        label.style.width = 'auto';
-        label.textContent = `${String(h).padStart(2, '0')}:00`;
-        hours.appendChild(label);
-    }
-    
-    if (taskArray.length === 0) {
-        const emptyMsg = document.createElement('div');
-        emptyMsg.style.cssText = `
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            color: var(--text-tertiary);
-            font-weight: 500;
-            z-index: 5;
-            pointer-events: none;
-        `;
-        emptyMsg.textContent = 'Нет задач с временем на сегодня';
-        hours.appendChild(emptyMsg);
-        return;
-    }
-    
-    const { layout, maxColumns } = calculateLayout(taskArray);
-    const taskH = Math.min(80, 560 / Math.max(maxColumns, 1));
-    
-    taskArray.forEach(task => {
-        if (!task.time) return;
-        const [h, m] = task.time.split(':').map(Number);
-        const s = h * 60 + m;
-        let dur = calculateTotalMinutes(task);
-        const rem = 1440 - s;
-        let trunc = false;
-        if (dur > rem) { dur = rem; trunc = true; }
-        
-        const leftPercent = (s / 1440) * 100;
-        const widthPercent = Math.max((dur / 1440) * 100, 2);
-        
-        const d = document.createElement('div');
-        d.className = 'timeline-task' + (task.completed ? ' completed' : '');
-        d.style.left = `${leftPercent}%`;
-        d.style.width = `${widthPercent}%`;
-        d.style.top = `${30 + layout[task.id].column * (taskH + 5)}px`;
-        d.style.height = `${taskH}px`;
-        d.style.background = getTaskBackground(task.lists);
-        d.onclick = () => openModal(task.id);
-        
-        const dt = formatTaskDuration(task);
-        d.innerHTML = `<div class="timeline-task-name">${task.name}</div><div class="timeline-task-time">${task.time} · ${dt}${trunc ? ' → завтра' : ''}</div>`;
-        hours.appendChild(d);
-    });
+const hours = document.getElementById('timeline-hours');
+const isMobile = window.innerWidth < 768;
+hours.innerHTML = '';
+hours.style.width = '100%';
+hours.style.minWidth = '100%';
+
+// Добавляем по 1 часу невидимого пространства слева и справа
+// Общий диапазон: 26 часов = 1560 минут
+const totalMinutes = 1560;
+const offsetMinutes = 60;
+
+let step = 1;
+if (isMobile) {
+step = 3;
+} else {
+const containerWidth = hours.clientWidth;
+if (containerWidth < 600) step = 3;
+else if (containerWidth < 1000) step = 2;
+else step = 1;
 }
 
+// Рисуем метки от 00:00 до 00:00 (включая конечную)
+for (let h = 0; h <= 24; h += step) {
+const hm = h * 60 + offsetMinutes;
+const percent = (hm / totalMinutes) * 100;
+
+const line = document.createElement('div');
+line.style.cssText = `
+position: absolute;
+left: ${percent}%;
+top: 0;
+bottom: 0;
+width: 0;
+border-left: 1px dashed rgba(128, 128, 128, 0.3);
+z-index: 15;
+pointer-events: none;
+`;
+hours.appendChild(line);
+
+const label = document.createElement('div');
+label.className = 'timeline-hour';
+label.style.left = `${percent}%`;
+label.style.transform = 'translateX(-50%)';
+label.style.top = '0';
+label.style.width = 'auto';
+label.textContent = `${String(h % 24).padStart(2, '0')}:00`;
+hours.appendChild(label);
+}
+
+if (taskArray.length === 0) {
+const emptyMsg = document.createElement('div');
+emptyMsg.style.cssText = `
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+text-align: center;
+color: var(--text-tertiary);
+font-weight: 500;
+z-index: 5;
+pointer-events: none;
+`;
+emptyMsg.textContent = 'Нет задач с временем на сегодня';
+hours.appendChild(emptyMsg);
+return;
+}
+
+const { layout, maxColumns } = calculateLayout(taskArray);
+const taskH = Math.min(80, 560 / Math.max(maxColumns, 1));
+
+taskArray.forEach(task => {
+if (!task.time) return;
+const [h, m] = task.time.split(':').map(Number);
+const s = h * 60 + m;
+let dur = calculateTotalMinutes(task);
+const rem = 1440 - s;
+let trunc = false;
+if (dur > rem) { dur = rem; trunc = true; }
+
+const leftPercent = ((s + offsetMinutes) / totalMinutes) * 100;
+const widthPercent = Math.max((dur / totalMinutes) * 100, 2);
+
+const d = document.createElement('div');
+d.className = 'timeline-task' + (task.completed ? ' completed' : '');
+d.style.left = `${leftPercent}%`;
+d.style.width = `${widthPercent}%`;
+d.style.top = `${30 + layout[task.id].column * (taskH + 5)}px`;
+d.style.height = `${taskH}px`;
+d.style.background = getTaskBackground(task.lists);
+d.onclick = () => openModal(task.id);
+
+const dt = formatTaskDuration(task);
+d.innerHTML = `<div class="timeline-task-name">${task.name}</div><div class="timeline-task-time">${task.time} · ${dt}${trunc ? ' → завтра' : ''}</div>`;
+hours.appendChild(d);
+});
+}
 function calculateLayout(taskArray) {
-    const layout = {}, cols = [];
-    let maxC = 0;
-    taskArray.forEach(task => {
-        if (!task.time) return;
-        const [h, m] = task.time.split(':').map(Number);
-        const s = h * 60 + m, e = s + calculateTotalMinutes(task);
-        let c = 0;
-        while (cols[c] && cols[c] > s) c++;
-        cols[c] = e;
-        maxC = Math.max(maxC, c + 1);
-        layout[task.id] = { column: c, width: 1 };
-    });
-    return { layout, maxColumns: maxC };
+const layout = {}, cols = [];
+let maxC = 0;
+taskArray.forEach(task => {
+if (!task.time) return;
+const [h, m] = task.time.split(':').map(Number);
+const s = h * 60 + m, e = s + calculateTotalMinutes(task);
+let c = 0;
+while (cols[c] && cols[c] > s) c++;
+cols[c] = e;
+maxC = Math.max(maxC, c + 1);
+layout[task.id] = { column: c, width: 1 };
+});
+return { layout, maxColumns: maxC };
 }
 function formatTaskDuration(task) {
 let d, h, m;
